@@ -28,7 +28,10 @@ let handleUserLogin = async (email, password) => {
 
 let handleUserRegister = async (data) => {
   try {
-    // Check email tồn tại chưa
+    if (!data.firstName || !data.lastName || !data.email || !data.password) {
+      return { errCode: 2, errMessage: "Missing required fields" };
+    }
+
     let existingUser = await db.User.findOne({ where: { email: data.email } });
     if (existingUser) {
       return { errCode: 1, errMessage: "Email already registered" };
