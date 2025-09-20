@@ -7,7 +7,7 @@ If the login is successful, the server will return the following response:
 ```
 {
     "errCode": 0,
-    "message": "Login successful",
+    "errMessage": "Login successful",
     "user": {
         "id": 1,
         "firstName": "Thang",
@@ -45,7 +45,7 @@ while if the registration is successful, the server will return the following re
 ```
 {
   "errCode": 0,
-  "message": "Login successful",
+  "errMessage": "Login successful",
   "user": {
     "id": 1,
     "firstName": "Thang",
