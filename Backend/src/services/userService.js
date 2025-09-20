@@ -19,7 +19,7 @@ let handleUserLogin = async (email, password) => {
       return { errCode: 2, errMessage: "Wrong password" };
     }
 
-    return { errCode: 0, message: "Login successful", user };
+    return { errCode: 0, errMessage: "Login successful", user };
   } catch (e) {
     console.log(e);
     return { errCode: -1, errMessage: "Server error" };
@@ -46,7 +46,7 @@ let handleUserRegister = async (data) => {
       password: hashPassword,
     });
 
-    return { errCode: 0, message: "Register successful", user: newUser };
+    return { errCode: 0, errMessage: "Register successful", user: newUser };
   } catch (e) {
     console.log(e);
     return { errCode: -1, errMessage: "Server error" };
