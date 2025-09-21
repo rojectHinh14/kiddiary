@@ -8,12 +8,12 @@ If the login is successful, the server will return the following response:
 {
     "errCode": 0,
     "errMessage": "Login successful",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJ0ZXN0QGdtYWlsLmNvbSIsImlhdCI6MTc1ODQ1NzAzOCwiZXhwIjoxNzU4NDc1MDM4fQ.EZ0Qapx0Ul_23ElCJvTbDgmXGoZd3a9KUGHhK136-yE",
     "user": {
         "id": 1,
         "firstName": "Thang",
         "lastName": "Vu",
         "email": "test@gmail.com",
-        "password": "$2b$10$2q5dzPbXWOWAztrr/z2Tj.UF0oUf8rlFP.38QF14btYfLpTA62rpi",
         "createdAt": "2025-09-19T13:43:57.000Z",
         "updatedAt": "2025-09-19T13:43:57.000Z"
     }
@@ -80,3 +80,4 @@ If the user enters missing registration information, the server will return the 
 - **Then declare NODE_ENV=development, the other 2 variables are random**
 - **In the src/config/config.json file, edit the port and database, username, and password of mysql according to the local setup.**
 - **Once you have set up mysql, run the command "npx sequelize-cli db:migrate" to have sequelize automatically create tables for the database.**
+- **JWT_SECRET generate any 64 character code**

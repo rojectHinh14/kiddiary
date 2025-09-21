@@ -1,12 +1,14 @@
 import db from "../models/index.js";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { jwtConfig } from "../config/jwt.js";
 
 const salt = bcrypt.genSaltSync(10);
 
-let handleUserLogin = async (email, password) => {
+const handleUserLogin = async (email, password) => {
   try {
     let user = await db.User.findOne({
-      where: { email: email },
+      where: { email },
       raw: true,
     });
 
@@ -14,14 +16,25 @@ let handleUserLogin = async (email, password) => {
       return { errCode: 1, errMessage: "User not found" };
     }
 
-    let check = bcrypt.compareSync(password, user.password);
-    if (!check) {
+    let checkPassword = bcrypt.compareSync(password, user.password);
+    if (!checkPassword) {
       return { errCode: 2, errMessage: "Wrong password" };
     }
 
-    return { errCode: 0, errMessage: "Login successful", user };
+    delete user.password;
+
+    let token = jwt.sign({ id: user.id, email: user.email }, jwtConfig.secret, {
+      expiresIn: jwtConfig.expiresIn,
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Login successful",
+      token,
+      user,
+    };
   } catch (e) {
-    console.log(e);
+    console.error("Login error:", e);
     return { errCode: -1, errMessage: "Server error" };
   }
 };
