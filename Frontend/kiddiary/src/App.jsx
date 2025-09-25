@@ -1,11 +1,16 @@
-import AuthPage from "./pages/AuthPage"
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import AuthPage from "./pages/AuthPage";
 
 function App() {
   return (
-    <div>
-    <AuthPage/>
-    </div>
-  )
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<AuthPage />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;

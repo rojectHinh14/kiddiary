@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { FiMenu } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
-export default function Navbar({ onLogin, onRegister, activeForm }) {
+export default function Navbar({ onLogin, onRegister, activeForm, simple }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -23,42 +24,53 @@ export default function Navbar({ onLogin, onRegister, activeForm }) {
             : "hidden md:flex space-x-8"
         }`}
       >
-        <a href="#" className="text-white hover:border-b-2 border-white">
-          Home
-        </a>
-        <a href="#" className="text-white hover:border-b-2 border-white">
-          Blog
-        </a>
-        <a href="#" className="text-white hover:border-b-2 border-white">
-          Services
-        </a>
-        <a href="#" className="text-white hover:border-b-2 border-white">
-          About
-        </a>
+        <Link to="/" className="text-white hover:border-b-2 border-white">Home</Link>
+        <Link to="/blog" className="text-white hover:border-b-2 border-white">Blog</Link>
+        <Link to="/services" className="text-white hover:border-b-2 border-white">Services</Link>
+        <Link to="/about" className="text-white hover:border-b-2 border-white">About</Link>
       </div>
 
       {/* Buttons */}
       <div className="hidden md:flex">
-        <button
-          onClick={onLogin}
-          className={`w-32 h-10 rounded-full mr-3 transition ${
-            activeForm === "login"
-              ? "bg-white/70 text-black"
-              : "bg-white/40 hover:bg-white/30 text-white"
-          }`}
-        >
-          Sign In
-        </button>
-        <button
-          onClick={onRegister}
-          className={`w-32 h-10 rounded-full transition ${
-            activeForm === "register"
-              ? "bg-white/70 text-black"
-              : "bg-white/40 hover:bg-white/30 text-white"
-          }`}
-        >
-          Sign Up
-        </button>
+        {simple ? (
+          <>
+            <Link
+              to="/login"
+              className="w-32 h-10 rounded-full mr-3 bg-white/40 hover:bg-white/30 text-white flex items-center justify-center"
+            >
+              Sign In
+            </Link>
+            <Link
+              to="/login"
+              className="w-32 h-10 rounded-full bg-white/40 hover:bg-white/30 text-white flex items-center justify-center"
+            >
+              Sign Up
+            </Link>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onLogin}
+              className={`w-32 h-10 rounded-full mr-3 transition ${
+                activeForm === "login"
+                  ? "bg-white/70 text-black"
+                  : "bg-white/40 hover:bg-white/30 text-white"
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={onRegister}
+              className={`w-32 h-10 rounded-full transition ${
+                activeForm === "register"
+                  ? "bg-white/70 text-black"
+                  : "bg-white/40 hover:bg-white/30 text-white"
+              }`}
+            >
+              Sign Up
+            </button>
+          </>
+        )}
       </div>
 
       {/* Mobile menu button */}
