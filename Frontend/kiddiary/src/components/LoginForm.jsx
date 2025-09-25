@@ -20,7 +20,7 @@ export default function LoginForm({ onSwitch }) {
           <div className="relative">
             <input
               type="text"
-              placeholder="Username or Email"
+              placeholder="Email"
               className="w-full h-12 rounded-full pl-12 bg-white/20 text-white placeholder-white outline-none"
             />
             <FiUser className="absolute left-4 top-3 text-white text-xl" />
