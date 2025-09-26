@@ -16,8 +16,14 @@ export default function Navbar({ onLogin, onRegister, activeForm, simple }) {
         />
       </div>
 
-      {/* Middle (Menu) */}
-      <div className="flex-[2] hidden md:flex justify-center space-x-10">
+      {/* Menu */}
+      <div
+        className={`${
+          menuOpen
+            ? "absolute top-20 left-0 w-full flex flex-col items-center bg-white/20 backdrop-blur-lg py-6 space-y-4 transition"
+            : "hidden md:flex space-x-8"
+        }`}
+      >
         <Link to="/" className="text-white hover:border-b-2 border-white">Home</Link>
         <Link to="/blog" className="text-white hover:border-b-2 border-white">Blog</Link>
         <Link to="/services" className="text-white hover:border-b-2 border-white">Services</Link>
