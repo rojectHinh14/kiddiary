@@ -1,3 +1,4 @@
+import ChatBox from "../components/ChatBox";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import { BuntingGarland } from "../utils/BuntingGarland";
@@ -90,6 +91,8 @@ export default function HomePage() {
 
       {/* Footer */}
       <Footer className="mt-12 md:mt-16" />
+      {/*Chat box */}
+      <ChatBox logoSrc="../../public/chatbox/logo.png" title="KidDiary Support" />
     </div>
   );
 }
