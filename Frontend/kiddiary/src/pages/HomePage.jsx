@@ -71,23 +71,25 @@ export default function HomePage() {
         </section>
 
         {/* Feature buttons */}
+        {/* Feature buttons */}
         <section className="flex flex-wrap justify-center gap-4 mt-6 px-6">
           {[
-            "Share special moment",
-            "Private, safe & secure",
-            "Capture baby's firsts",
-            "Keep family in the loop",
-            "Print photobooks",
-            "Revisit precious memories",
-          ].map((text, i) => (
+            { text: "Share special moment", color: "border-pink-400" },
+            { text: "Private, safe & secure", color: "border-blue-400" },
+            { text: "Capture baby's firsts", color: "border-green-400" },
+            { text: "Keep family in the loop", color: "border-yellow-400" },
+            { text: "Print photobooks", color: "border-orange-400" },
+            { text: "Revisit precious memories", color: "border-purple-400" },
+          ].map((item, i) => (
             <div
               key={i}
-              className="px-6 py-3 bg-white border border-gray-200 rounded-xl shadow-sm text-gray-600 font-medium hover:shadow-md cursor-pointer transition"
+              className={`px-6 py-3 bg-white border ${item.color} rounded-xl shadow-sm text-gray-600 font-medium hover:shadow-md cursor-pointer transition`}
             >
-              {text}
+              {item.text}
             </div>
           ))}
         </section>
+
       </div>
 
       {/* Footer */}

@@ -6,13 +6,13 @@ export default function Navbar({ onLogin, onRegister, activeForm, simple }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 w-full flex justify-between items-center h-20 px-6 bg-gradient-to-b from-black/60 to-transparent z-50">
-      {/* Logo */}
-      <div className="flex items-center space-x-3">
-        <img 
-          src="/login/logo.svg" 
-          alt="Kiddiary Logo" 
-          className="w-50 h-50 object-contain"  
+    <nav className="fixed top-0 w-full flex items-center h-20 px-6 bg-gradient-to-b from-black/60 to-transparent z-50">
+      {/* Left (Logo) */}
+      <div className="flex-1 flex items-center">
+        <img
+          src="/login/logo.svg"
+          alt="Kiddiary Logo"
+          className="w-32 h-auto object-contain"
         />
       </div>
 
@@ -30,8 +30,8 @@ export default function Navbar({ onLogin, onRegister, activeForm, simple }) {
         <Link to="/about" className="text-white hover:border-b-2 border-white">About</Link>
       </div>
 
-      {/* Buttons */}
-      <div className="hidden md:flex">
+      {/* Right (Buttons) */}
+      <div className="flex-1 hidden md:flex justify-end">
         {simple ? (
           <>
             <Link
@@ -80,6 +80,16 @@ export default function Navbar({ onLogin, onRegister, activeForm, simple }) {
           onClick={() => setMenuOpen(!menuOpen)}
         />
       </div>
+
+      {/* Mobile menu dropdown */}
+      {menuOpen && (
+        <div className="absolute top-20 left-0 w-full flex flex-col items-center bg-white/20 backdrop-blur-lg py-6 space-y-4 transition md:hidden">
+          <Link to="/" className="text-white hover:border-b-2 border-white">Home</Link>
+          <Link to="/blog" className="text-white hover:border-b-2 border-white">Blog</Link>
+          <Link to="/services" className="text-white hover:border-b-2 border-white">Services</Link>
+          <Link to="/about" className="text-white hover:border-b-2 border-white">About</Link>
+        </div>
+      )}
     </nav>
   );
 }
