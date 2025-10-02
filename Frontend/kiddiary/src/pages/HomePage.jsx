@@ -1,5 +1,5 @@
 import Navbar from "../components/Navbar";
-
+import ChatBox from "../components/ChatBox";
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#FFF9F0] flex flex-col relative overflow-hidden">
@@ -96,6 +96,9 @@ export default function HomePage() {
       <footer className="py-6 text-center text-gray-500 text-sm mt-12 border-t">
         © {new Date().getFullYear()} KidDiary. All rights reserved.
       </footer>
+
+      {/*Chat box */}
+      <ChatBox/>
     </div>
   );
 }
