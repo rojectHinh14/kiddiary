@@ -5,37 +5,78 @@ import { jwtConfig } from "../config/jwt.js";
 
 const salt = bcrypt.genSaltSync(10);
 
-const handleUserLogin = async (email, password) => {
+const checkUserEmail = async (userEmail) => {
   try {
-    let user = await db.User.findOne({
+    const user = await db.User.findOne({ where: { email: userEmail } });
+    return !!user; // true nếu tồn tại, false nếu không
+  } catch (error) {
+    throw error;
+  }
+};
+
+const handleUserLogin = async (email, password) => {
+  const userData = {};
+
+  try {
+    // Check email
+    const isExist = await checkUserEmail(email);
+    if (!isExist) {
+      userData.errCode = 1;
+      userData.errMessage = "Email không tồn tại";
+      return userData;
+    }
+
+    // Lấy thông tin user
+    const user = await db.User.findOne({
+      attributes: [
+        "id",
+        "email",
+        "roleId",
+        "password",
+        "firstName",
+        "lastName",
+        "address",
+        "phoneNumber",
+        "gender",
+        "image",
+      ],
       where: { email },
       raw: true,
     });
 
     if (!user) {
-      return { errCode: 1, errMessage: "User not found" };
+      userData.errCode = 2;
+      userData.errMessage = "Không tìm thấy người dùng";
+      return userData;
     }
 
-    let checkPassword = bcrypt.compareSync(password, user.password);
-    if (!checkPassword) {
-      return { errCode: 2, errMessage: "Wrong password" };
+    // Kiểm tra password
+    const isPasswordCorrect = bcrypt.compareSync(password, user.password);
+    if (!isPasswordCorrect) {
+      userData.errCode = 3;
+      userData.errMessage = "Sai mật khẩu";
+      return userData;
     }
 
+    // Xóa password trước khi trả về
     delete user.password;
 
-    let token = jwt.sign({ id: user.id, email: user.email }, jwtConfig.secret, {
-      expiresIn: jwtConfig.expiresIn,
-    });
+    // Tạo JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, roleId: user.roleId },
+      jwtConfig.secret,
+      { expiresIn: jwtConfig.expiresIn }
+    );
 
-    return {
-      errCode: 0,
-      errMessage: "Login successful",
-      token,
-      user,
-    };
-  } catch (e) {
-    console.error("Login error:", e);
-    return { errCode: -1, errMessage: "Server error" };
+    userData.errCode = 0;
+    userData.errMessage = "Đăng nhập thành công";
+    userData.user = user;
+    userData.token = token;
+
+    return userData;
+  } catch (error) {
+    console.error("Login error:", error);
+    return { errCode: -1, errMessage: "Lỗi server" };
   }
 };
 
