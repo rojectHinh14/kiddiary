@@ -1,6 +1,9 @@
+import AlbumSection from "../components/AlbumSection";
 import ChatBox from "../components/ChatBox";
+import FeatureSection from "../components/FeatureSection";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import ParentingAssistantSection from "../components/ParentingAssistantSection";
 import { BuntingGarland } from "../utils/BuntingGarland";
 
 export default function HomePage() {
@@ -88,6 +91,24 @@ export default function HomePage() {
           ))}
         </section>
       </div>
+<FeatureSection
+  features={[
+    {
+      title: "Smart Memory Search",
+      description: "With our AI-powered search, you don't need to scroll endlessly...",
+      buttonText: "Learn more",
+      buttonHref: "#",
+      imagePosition: "left",
+      images: [
+        { src: "/image1.jpg", alt: "Photo 1", borderColor: "green" },
+        { src: "/image2.jpg", alt: "Photo 2", borderColor: "orange" },
+        { src: "/image3.jpg", alt: "Photo 3", borderColor: "pink" }
+      ]
+    }
+  ]}
+/>
+<AlbumSection/>
+<ParentingAssistantSection/>
 
       {/* Footer */}
       <Footer className="mt-12 md:mt-16" />
