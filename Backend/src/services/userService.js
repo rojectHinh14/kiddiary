@@ -98,6 +98,7 @@ let handleUserRegister = async (data) => {
       lastName: data.lastName,
       email: data.email,
       password: hashPassword,
+      roleId: "4",
     });
 
     return { errCode: 0, errMessage: "Register successful", user: newUser };
