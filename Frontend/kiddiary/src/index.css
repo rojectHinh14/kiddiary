@@ -19,3 +19,6 @@ body {
   min-height: 100vh;
 }
 
+/* Ẩn scrollbar mặc định ở vùng có overflow-x (nếu dùng sau này) */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
