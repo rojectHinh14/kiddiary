@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { FiUser, FiLock } from "react-icons/fi";
+import { connect } from "react-redux";
 import { loginUserService } from "../services/userService";
+import { userLoginSuccess, userLoginFail } from "../store/actions/userActions";
 
-export default function LoginForm({ onSwitch, onLoginSuccess }) {
+function LoginForm({
+  onSwitch,
+  onLoginSuccess,
+  userLoginSuccess,
+  userLoginFail,
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -13,18 +20,27 @@ export default function LoginForm({ onSwitch, onLoginSuccess }) {
     setLoading(true);
     try {
       const res = await loginUserService({ email, password });
+
       if (res.data.errCode === 0) {
-        if (res.data.token) {
-          localStorage.setItem("token", res.data.token);
+        const userInfo = res.data.user;
+        const token = res.data.token;
+
+        if (token) {
+          localStorage.setItem("token", token);
         }
-        console.log("User data:", res.data);
-        onLoginSuccess();
+
+        userLoginSuccess(userInfo);
+
+        console.log("User data:", userInfo);
+        onLoginSuccess?.();
       } else {
-        setError(res.data.errMessage);
+        setError(res.data.errMessage || "Sai email hoặc mật khẩu");
+        userLoginFail();
       }
     } catch (err) {
       console.error("Login error:", err);
       setError("Server error hoặc kết nối thất bại!");
+      userLoginFail();
     } finally {
       setLoading(false);
     }
@@ -87,3 +103,15 @@ export default function LoginForm({ onSwitch, onLoginSuccess }) {
     </div>
   );
 }
+
+const mapStateToProps = (state) => ({
+  isLoggedIn: state.user.isLoggedIn,
+  userInfo: state.user.userInfo,
+});
+
+const mapDispatchToProps = (dispatch) => ({
+  userLoginSuccess: (userInfo) => dispatch(userLoginSuccess(userInfo)),
+  userLoginFail: () => dispatch(userLoginFail()),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(LoginForm);
