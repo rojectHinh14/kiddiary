@@ -1,13 +1,20 @@
 import express from "express";
 import homeController from "../controllers/homeController";
 import userController from "../controllers/userController.js";
-
+import mediaController from "../controllers/mediaController.js";
+import { verifyToken } from "../middleware/verifyToken.js";
 let router = express.Router();
 let initWebRoutes = (app) => {
   router.get("/about", homeController.getHomePage);
   router.post("/api/login", userController.handleLogin);
   router.post("/api/register", userController.handleRegister);
 
+  //api nào cần token thì thêm token vào route như ví dụ:
+  //router.get("/getAllUsers", verifyToken, userController.getAllUsers);
+
+  //media
+  router.post("/api/media/upload", verifyToken, mediaController.uploadMedia);
+  router.get("/api/media", verifyToken, mediaController.getAllMediaByUser);
   return app.use("/", router);
 };
 

@@ -1,12 +1,12 @@
 import userService from "../services/userService.js";
 
 let handleLogin = async (req, res) => {
-  let { email, password } = req.body;
+  const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ errCode: 1, errMessage: "Missing input" });
   }
 
-  let result = await userService.handleUserLogin(email, password);
+  const result = await userService.handleUserLogin(email, password, res);
   return res.status(200).json(result);
 };
 
