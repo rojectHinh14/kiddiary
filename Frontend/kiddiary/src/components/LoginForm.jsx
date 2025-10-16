@@ -3,7 +3,7 @@ import { FiUser, FiLock } from "react-icons/fi";
 import { connect } from "react-redux";
 import { loginUserService } from "../services/userService";
 import { userLoginSuccess, userLoginFail } from "../store/actions/userActions";
-
+import axios from "../axios";
 function LoginForm({
   onSwitch,
   onLoginSuccess,
@@ -23,11 +23,6 @@ function LoginForm({
 
       if (res.data.errCode === 0) {
         const userInfo = res.data.user;
-        const token = res.data.token;
-
-        if (token) {
-          localStorage.setItem("token", token);
-        }
 
         userLoginSuccess(userInfo);
 
