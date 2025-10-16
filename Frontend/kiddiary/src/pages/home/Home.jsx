@@ -1,72 +1,120 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import MomentCard from "../../components/home/MomentCard";
 import HeaderHome from "../../components/home/HeaderHome";
 import { PenSquare } from "lucide-react";
 import NewPostDialog from "../../components/home/NewPostDialog";
 import Profile from "../profile/Profile";
 import CalendarPage from "../calendar/CalendarPage";
+import {
+  uploadMediaService,
+  getAllMediaByUserService,
+} from "../../services/mediaService";
+import { format } from "date-fns";
 
 export default function Home() {
-  // seed sample post
-  const sampleImages = useMemo(
-    () => [
-      "https://images.unsplash.com/photo-1600880292089-90a7e086ee0c",
-      "https://images.unsplash.com/photo-1600880292243-6b4f3d3a3f07",
-      "https://images.unsplash.com/photo-1600880292050-69a8e0d0db10",
-    ],
-    []
-  );
-
-  const [posts, setPosts] = useState([
-    {
-      id: "seed-1",
-      username: "Username",
-      date: "Posted date",
-      caption: "Insert Caption Here",
-      images: sampleImages,
-      avatar: "https://i.pravatar.cc/120?img=12",
-    },
-  ]);
-
+  const [posts, setPosts] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
-
-  // 👉 thêm state để biết đang ở tab nào
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("moment");
 
-
-  const handleCreate = ({ files, caption, date, people }) => {
-    const urls = files.slice(0, 3).map((f) => URL.createObjectURL(f));
-    const prettyDate = new Date(date).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
-    const newPost = {
-      id: crypto.randomUUID(),
-      username: "Username",
-      date: prettyDate,
-      caption: caption?.trim() || "(No caption)",
-      images: urls,
-      avatar: "https://i.pravatar.cc/120?img=12",
-      people,
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllMediaByUserService();
+        if (response.data && response.data.errCode === 0) {
+          const mappedPosts = response.data.data
+            .map((media) => ({
+              id: media.id.toString(),
+              username: "Username",
+              date: format(new Date(media.date), "dd MMM yyyy"),
+              caption: media.description || "(No caption)",
+              images: [`data:image/jpeg;base64,${media.fileUrl}`],
+              avatar: "https://i.pravatar.cc/120?img=12",
+              people: "",
+            }))
+            .reverse();
+          setPosts(mappedPosts);
+        }
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setPosts((prev) => [newPost, ...prev]);
-    setOpenDialog(false);
+    if (tab === "moment") {
+      fetchPosts();
+    }
+  }, [tab]);
+
+  const handleCreate = async ({ files, caption, date: inputDate, people }) => {
+    if (files.length === 0) return;
+
+    try {
+      // Convert file đầu tiên thành base64
+      const file = files[0];
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = () => {
+          const base64String = reader.result.split(",")[1];
+          resolve(base64String);
+        };
+      });
+
+      const response = await uploadMediaService({
+        fileBase64: base64,
+        description: caption,
+        date: format(inputDate || new Date(), "yyyy-MM-dd"),
+      });
+
+      if (response.data && response.data.errCode === 0) {
+        // Refetch để update posts
+        const fetchResponse = await getAllMediaByUserService();
+        if (fetchResponse.data && fetchResponse.data.errCode === 0) {
+          const mappedPosts = fetchResponse.data.data
+            .map((media) => ({
+              id: media.id.toString(),
+              username: "Username",
+              date: format(new Date(media.date), "dd MMM yyyy"),
+              caption: media.description || "(No caption)",
+              images: [`data:image/jpeg;base64,${media.fileUrl}`],
+              avatar: "https://i.pravatar.cc/120?img=12",
+              people: "",
+            }))
+            .reverse();
+          setPosts(mappedPosts);
+        }
+        setOpenDialog(false);
+      } else {
+        alert("Upload failed: " + (response.data?.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error creating post:", error);
+      alert("Upload error: " + error.message);
+    }
   };
+
+  if (loading && tab === "moment") {
+    return (
+      <div className="min-h-screen bg-[#FFF9F0] flex items-center justify-center">
+        Loading posts...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FFF9F0] flex flex-col overflow-x-hidden">
-<HeaderHome
-  onOpenProfile={() => setTab("profile")}
-  onLogout={() => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  }}
-/>
+      <HeaderHome
+        onOpenProfile={() => setTab("profile")}
+        onLogout={() => {
+          localStorage.removeItem("token");
+          window.location.href = "/login";
+        }}
+      />
       <div className="flex w-full">
-        {/* Sidebar */}
+        {/* Sidebar - giữ nguyên */}
         <aside className="w-56 shrink-0 h-[100vh] bg-[#FFF6EA] p-6 space-y-6">
           <nav className="flex flex-col gap-3">
             <button
@@ -135,7 +183,7 @@ export default function Home() {
             </>
           )}
 
-          {tab === "calendar" && <CalendarPage/>}
+          {tab === "calendar" && <CalendarPage />}
 
           {tab === "album" && (
             <div className="text-gray-500">🖼 Album view here</div>
@@ -148,8 +196,7 @@ export default function Home() {
           {tab === "children" && (
             <div className="text-gray-500">👶 Children</div>
           )}
-            {tab === "profile" && <Profile />}   
-
+          {tab === "profile" && <Profile />}
         </main>
       </div>
 

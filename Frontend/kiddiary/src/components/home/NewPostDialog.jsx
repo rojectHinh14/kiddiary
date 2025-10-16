@@ -156,7 +156,9 @@ export default function NewPostDialog({ open, onClose, onSubmit }) {
 
             {/* People */}
             <div>
-              <div className="text-gray-700 mb-2">Who&apos;s in this moment?</div>
+              <div className="text-gray-700 mb-2">
+                Who&apos;s in this moment?
+              </div>
               <TextField
                 placeholder="Type names, separated by commas"
                 value={people}
