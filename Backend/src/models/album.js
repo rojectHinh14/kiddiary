@@ -1,15 +1,23 @@
 "use strict";
 const { Model } = require("sequelize");
+
 module.exports = (sequelize, DataTypes) => {
   class Album extends Model {
-    static associate(models) {}
+    static associate(models) {
+      Album.belongsTo(models.User, { foreignKey: "userId" });
+      Album.belongsToMany(models.Media, {
+        through: models.AlbumMedia,
+        foreignKey: "albumId",
+        otherKey: "mediaId",
+      });
+    }
   }
+
   Album.init(
     {
-      familyId: { type: DataTypes.INTEGER, allowNull: false },
-      childId: DataTypes.INTEGER,
+      userId: { type: DataTypes.INTEGER, allowNull: false },
       albumName: DataTypes.STRING,
-      albumTypeCode: DataTypes.STRING, // FK -> AllCode.keyMap
+      albumTypeCode: DataTypes.STRING,
     },
     {
       sequelize,
@@ -17,5 +25,6 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "Albums",
     }
   );
+
   return Album;
 };

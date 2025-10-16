@@ -1,34 +1,30 @@
 import express from "express";
 import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
+import cors from "cors";
 import viewEngine from "./config/viewEngine.js";
 import initWebRoutes from "./route/web.js";
 import dotenv from "dotenv";
 dotenv.config();
-let app = express();
 
-app.use(function (req, res, next) {
-  res.setHeader("Access-Control-Allow-Origin", process.env.URL_REACT || "*");
+const app = express();
 
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, OPTIONS, PUT, PATCH, DELETE"
-  );
+//Dùng CORS để cookie hoạt động đúng
+app.use(
+  cors({
+    origin: process.env.URL_REACT || "http://localhost:3000",
+    credentials: true,
+  })
+);
 
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "X-Requested-With,content-type"
-  );
-
-  res.setHeader("Access-Control-Allow-Credentials", true);
-
-  next();
-});
+app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
 viewEngine(app);
 initWebRoutes(app);
 
-let port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log("Backend is running on the port " + port);
+  console.log("Backend is running on port " + port);
 });
