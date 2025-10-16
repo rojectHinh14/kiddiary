@@ -29,7 +29,7 @@ export default function AuthPage() {
           >
             <LoginForm
               onSwitch={() => setActiveForm("register")}
-              onLoginSuccess={() => navigate("/")}
+              onLoginSuccess={() => navigate("/home")}
             />
           </div>
 
