@@ -2,6 +2,8 @@ import db from "../models/index.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { jwtConfig } from "../config/jwt.js";
+import path from "path";
+import fs from "fs";
 
 const salt = bcrypt.genSaltSync(10);
 
@@ -104,4 +106,63 @@ let handleUserRegister = async (data) => {
   }
 };
 
-export default { handleUserLogin, handleUserRegister };
+const getUserById = async (userId) => {
+  try {
+    const user = await db.User.findOne({
+      where: { id: userId },
+      attributes: { exclude: ["password"] },
+    });
+
+    if (!user) {
+      return { errCode: 1, message: "User not found" };
+    }
+
+    return {
+      errCode: 0,
+      message: "Get user info successfully",
+      data: user,
+    };
+  } catch (err) {
+    console.error("Error in getUserById:", err);
+    return { errCode: 1, message: "Error getting user info" };
+  }
+};
+
+const updateUser = async (userId, updateData) => {
+  try {
+    const user = await db.User.findByPk(userId);
+    if (!user) {
+      return { errCode: 1, message: "User not found" };
+    }
+
+    // Xử lý nếu có ảnh base64
+    if (updateData.image && updateData.image.startsWith("data:image")) {
+      const base64Data = updateData.image.replace(/^data:.+;base64,/, "");
+
+      const uploadDir = path.join(__dirname, "../../uploads/avatars");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const fileName = `avatar_${userId}_${Date.now()}.jpg`;
+      const filePath = path.join(uploadDir, fileName);
+      fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
+
+      updateData.image = `/uploads/avatars/${fileName}`;
+    }
+
+    if (updateData.password) {
+      const salt = bcrypt.genSaltSync(10);
+      updateData.password = bcrypt.hashSync(updateData.password, salt);
+    }
+
+    await db.User.update(updateData, { where: { id: userId } });
+
+    return { errCode: 0, message: "User updated successfully" };
+  } catch (err) {
+    console.error("Error in updateUser:", err);
+    return { errCode: 2, message: "Error updating user", error: err.message };
+  }
+};
+
+export default { handleUserLogin, handleUserRegister, getUserById, updateUser };

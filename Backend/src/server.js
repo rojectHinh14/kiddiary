@@ -5,6 +5,7 @@ import cors from "cors";
 import viewEngine from "./config/viewEngine.js";
 import initWebRoutes from "./route/web.js";
 import dotenv from "dotenv";
+const path = require("path");
 dotenv.config();
 
 const app = express();
@@ -20,7 +21,7 @@ app.use(
 app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
-
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 viewEngine(app);
 initWebRoutes(app);
 

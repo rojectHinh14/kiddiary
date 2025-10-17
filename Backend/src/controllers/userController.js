@@ -19,5 +19,32 @@ let handleRegister = async (req, res) => {
   let result = await userService.handleUserRegister(req.body);
   return res.status(200).json(result);
 };
+let getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id; // lấy từ token decode
+    const result = await userService.getUserById(userId);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getUserProfile:", error);
+    return res.status(500).json({ errCode: -1, errMessage: "Server error" });
+  }
+};
 
-export default { handleLogin, handleRegister };
+let updateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const updateData = req.body;
+    const result = await userService.updateUser(userId, updateData);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in updateUser:", error);
+    return res.status(500).json({ errCode: -1, errMessage: "Server error" });
+  }
+};
+
+export default {
+  handleLogin,
+  handleRegister,
+  getUserProfile,
+  updateUser,
+};
