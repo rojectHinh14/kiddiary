@@ -12,6 +12,9 @@ let initWebRoutes = (app) => {
   //api nào cần token thì thêm token vào route như ví dụ:
   //router.get("/getAllUsers", verifyToken, userController.getAllUsers);
 
+  //user
+  router.get("/api/user/profile", verifyToken, userController.getUserProfile);
+  router.put("/api/users/:id", verifyToken, userController.updateUser);
   //media
   router.post("/api/media/upload", verifyToken, mediaController.uploadMedia);
   router.get("/api/media", verifyToken, mediaController.getAllMediaByUser);
