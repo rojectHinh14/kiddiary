@@ -1,12 +1,15 @@
+import AlbumSection from "../components/AlbumSection";
 import ChatBox from "../components/ChatBox";
+import FeatureSection from "../components/FeatureSection";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
-import HeroSection from "../components/HeroSection"
+import ParentingAssistantSection from "../components/ParentingAssistantSection";
+import TestimonialsPage from "../components/TestimonialsPage";
 import { BuntingGarland } from "../utils/BuntingGarland";
 
 export default function HomePage() {
   return (
-<div className="min-h-screen bg-[#FFF9F0] flex flex-col relative overflow-x-hidden font-montAlt">
+    <div className="min-h-screen bg-[#FFF9F0] flex flex-col relative overflow-x-hidden font-montAlt">
       {/* Navbar */}
       <Header simple />
 
@@ -23,8 +26,9 @@ export default function HomePage() {
           </h1>
 
           <p className="text-[#6B6B6B] text-base md:text-lg mt-4 max-w-2xl mx-auto">
-            Capture and privately share sweet snapshots and videos of your littles
-            with our family photo-sharing app that turns moments into memories.
+            Capture and privately share sweet snapshots and videos of your
+            littles with our family photo-sharing app that turns moments into
+            memories.
           </p>
 
           <button className="mt-6 px-6 py-3 rounded-full bg-[#41B3A2] text-white hover:bg-[#379889] transition font-semibold">
@@ -93,11 +97,34 @@ export default function HomePage() {
           <HeroSection/>
         </section>
       </div>
+      <FeatureSection
+        features={[
+          {
+            title: "Smart Memory Search",
+            description:
+              "With our AI-powered search, you don't need to scroll endlessly...",
+            buttonText: "Learn more",
+            buttonHref: "#",
+            imagePosition: "left",
+            images: [
+              { src: "/image1.jpg", alt: "Photo 1", borderColor: "green" },
+              { src: "/image2.jpg", alt: "Photo 2", borderColor: "orange" },
+              { src: "/image3.jpg", alt: "Photo 3", borderColor: "pink" },
+            ],
+          },
+        ]}
+      />
+      <AlbumSection />
+      <ParentingAssistantSection />
+      <TestimonialsPage />
 
       {/* Footer */}
       <Footer className="mt-12 md:mt-16" />
       {/*Chat box */}
-      <ChatBox logoSrc="../../public/chatbox/logo.png" title="KidDiary Support" />
+      <ChatBox
+        logoSrc="../../public/chatbox/logo.png"
+        title="KidDiary Support"
+      />
     </div>
   );
 }
