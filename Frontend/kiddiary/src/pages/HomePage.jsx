@@ -1,6 +1,7 @@
 import ChatBox from "../components/ChatBox";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import HeroSection from "../components/HeroSection"
 import { BuntingGarland } from "../utils/BuntingGarland";
 
 export default function HomePage() {
@@ -86,6 +87,10 @@ export default function HomePage() {
               {item.text}
             </div>
           ))}
+        </section>
+
+        <section>
+          <HeroSection/>
         </section>
       </div>
 
