@@ -1,9 +1,9 @@
 {
   "development": {
     "username": "root",
-    "password": null,
+    "password": "1234",
     "database": "kiddiary",
-    "port": 3307,
+    "port": 3306,
     "dialect": "mysql",
     "logging": false,
     "raw": true,
