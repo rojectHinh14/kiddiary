@@ -10,6 +10,9 @@ import {
   getAllMediaByUserService,
 } from "../../services/mediaService";
 import { format } from "date-fns";
+import AlbumPanel from "../Album/AlbumPanel";
+import ChildrenPanel from "../child/ChildrenPanel";
+import ChatBox from "../../components/ChatBox";
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
@@ -113,9 +116,8 @@ export default function Home() {
           window.location.href = "/login";
         }}
       />
-      <div className="flex w-full">
-        {/* Sidebar - giữ nguyên */}
-        <aside className="w-56 shrink-0 h-[100vh] bg-[#FFF6EA] p-6 space-y-6">
+  <div className="flex flex-1 overflow-hidden">
+    <aside className="w-56 shrink-0 bg-[#FFF6EA] p-6 overflow-y-auto">
           <nav className="flex flex-col gap-3">
             <button
               onClick={() => setTab("moment")}
@@ -185,17 +187,13 @@ export default function Home() {
 
           {tab === "calendar" && <CalendarPage />}
 
-          {tab === "album" && (
-            <div className="text-gray-500">🖼 Album view here</div>
-          )}
+          {tab === "album" && <AlbumPanel/>}
 
           {tab === "family" && (
             <div className="text-gray-500">👨‍👩‍👧 Family & Friend</div>
           )}
 
-          {tab === "children" && (
-            <div className="text-gray-500">👶 Children</div>
-          )}
+          {tab === "children" && <ChildrenPanel/>}
           {tab === "profile" && <Profile />}
         </main>
       </div>
@@ -205,6 +203,7 @@ export default function Home() {
         onClose={() => setOpenDialog(false)}
         onSubmit={handleCreate}
       />
+      <ChatBox/>
     </div>
   );
 }
