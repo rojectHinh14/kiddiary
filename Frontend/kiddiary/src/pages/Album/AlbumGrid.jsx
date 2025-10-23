@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import AlbumCard from "./AlbumCard";
 
-export default function AlbumGrid({ albums, onAddClick }) {
+export default function AlbumGrid({ albums, onAddClick, onAddToAlbum }) {
   const navigate = useNavigate();
 
   return (
@@ -10,7 +10,8 @@ export default function AlbumGrid({ albums, onAddClick }) {
         <AlbumCard
           key={a.id}
           album={a}
-          onOpen={() => navigate(`/albums/${a.id}`)}  // 👈 chuyển route
+          onOpen={() => navigate(`/albums/${a.id}`)}
+          onAddToAlbum={() => onAddToAlbum?.(a.id)}
         />
       ))}
 
