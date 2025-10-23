@@ -2,6 +2,7 @@ import express from "express";
 import homeController from "../controllers/homeController";
 import userController from "../controllers/userController.js";
 import mediaController from "../controllers/mediaController.js";
+import albumController from "../controllers/albumController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 let router = express.Router();
 let initWebRoutes = (app) => {
@@ -18,6 +19,18 @@ let initWebRoutes = (app) => {
   //media
   router.post("/api/media/upload", verifyToken, mediaController.uploadMedia);
   router.get("/api/media", verifyToken, mediaController.getAllMediaByUser);
+  //album
+  router.post("/api/albums", verifyToken, albumController.createAlbum);
+  router.get("/api/albums", verifyToken, albumController.getAllAlbumsByUser);
+  //add media to album
+  router.post(
+    "/api/albums/:albumId/media",
+    verifyToken,
+    albumController.addMediaToAlbum
+  );
+  //view album
+  router.get("/api/albums/:albumId", verifyToken, albumController.getAlbumById);
+
   return app.use("/", router);
 };
 
