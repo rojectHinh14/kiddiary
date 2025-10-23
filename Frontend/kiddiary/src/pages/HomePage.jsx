@@ -6,6 +6,7 @@ import Header from "../components/Header";
 import ParentingAssistantSection from "../components/ParentingAssistantSection";
 import TestimonialsPage from "../components/TestimonialsPage";
 import { BuntingGarland } from "../utils/BuntingGarland";
+import HeroSection from "../components/HeroSection";
 
 export default function HomePage() {
   return (
@@ -93,9 +94,6 @@ export default function HomePage() {
           ))}
         </section>
 
-        <section>
-          <HeroSection/>
-        </section>
       </div>
       <FeatureSection
         features={[

@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
   Media.init(
     {
       userId: { type: DataTypes.INTEGER, allowNull: false },
-      fileUrl: DataTypes.TEXT,
+fileUrl: DataTypes.TEXT("long"),
       fileTypeCode: DataTypes.STRING,
       description: DataTypes.TEXT,
       aiTags: DataTypes.JSON,

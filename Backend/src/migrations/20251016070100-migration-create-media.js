@@ -13,16 +13,17 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: "Users", // Bảng User
+          model: "Users",
           key: "id",
         },
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
-      fileUrl: { type: Sequelize.TEXT },
+      fileUrl: { type: Sequelize.TEXT("long") }, 
       fileTypeCode: { type: Sequelize.STRING },
       description: { type: Sequelize.TEXT },
       aiTags: { type: Sequelize.JSON },
+      
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
