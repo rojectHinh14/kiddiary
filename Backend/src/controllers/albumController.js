@@ -41,13 +41,18 @@ const getAllAlbumsByUser = async (req, res) => {
 const addMediaToAlbum = async (req, res) => {
   try {
     const { albumId } = req.params;
-    const { mediaIds } = req.body; // Mảng ID ảnh
+    const { mediaIds } = req.body;
+    const userId = req.user.id; // ← THÊM
 
     if (!mediaIds || !Array.isArray(mediaIds)) {
       return res.status(400).json({ errCode: 1, message: "Invalid mediaIds" });
     }
 
-    const result = await albumService.addMediaToAlbum(albumId, mediaIds);
+    const result = await albumService.addMediaToAlbum(
+      albumId,
+      mediaIds,
+      userId
+    ); // ← PASS userId
     return res.status(200).json(result);
   } catch (err) {
     console.error("Error adding media to album:", err);
@@ -56,10 +61,12 @@ const addMediaToAlbum = async (req, res) => {
       .json({ message: "Server error", error: err.message });
   }
 };
+
 const getAlbumById = async (req, res) => {
   try {
     const { albumId } = req.params;
-    const album = await albumService.getAlbumById(albumId);
+    const userId = req.user.id; // ← THÊM
+    const album = await albumService.getAlbumById(albumId, userId); // ← PASS userId
     return res.status(200).json(album);
   } catch (err) {
     console.error("Error fetching album:", err);

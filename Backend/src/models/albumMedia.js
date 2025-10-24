@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       albumId: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        primaryKey: true, // ← THÊM ĐÂY
         references: {
           model: "Albums",
           key: "id",
@@ -20,6 +21,7 @@ module.exports = (sequelize, DataTypes) => {
       mediaId: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        primaryKey: true, // ← THÊM ĐÂY
         references: {
           model: "Media",
           key: "id",

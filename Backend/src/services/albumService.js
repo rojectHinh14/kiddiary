@@ -24,8 +24,6 @@ const getAllAlbumsByUser = async (userId) => {
           required: false,
         },
       ],
-      raw: true,
-      nest: true,
     });
     return { errCode: 0, data: albums };
   } catch (err) {
@@ -33,22 +31,27 @@ const getAllAlbumsByUser = async (userId) => {
     return { errCode: 1, message: "Error fetching albums" };
   }
 };
-
-const addMediaToAlbum = async (albumId, mediaIds) => {
+const addMediaToAlbum = async (albumId, mediaIds, userId) => {
+  // ← THÊM userId
   try {
     const album = await db.Album.findByPk(albumId);
-    if (!album) return { errCode: 1, message: "Album not found" };
+    if (!album || album.userId !== userId)
+      // ← THÊM CHECK
+      return { errCode: 1, message: "Album not found" };
 
     const mediaList = await db.Media.findAll({
-      where: { id: mediaIds },
+      where: { id: mediaIds, userId }, // ← THÊM userId CHECK
     });
-    if (!mediaList.length)
-      return { errCode: 2, message: "No valid media found" };
+    if (mediaList.length !== mediaIds.length)
+      // ← CẢI THIỆN: Check exact match
+      return {
+        errCode: 2,
+        message: "Some media not found or not owned by user",
+      };
 
-    // === Thêm thủ công vào bảng AlbumMedia ===
     await db.AlbumMedia.bulkCreate(
       mediaIds.map((mediaId) => ({ albumId, mediaId })),
-      { ignoreDuplicates: true } // Nếu Sequelize hỗ trợ
+      { ignoreDuplicates: true }
     );
 
     return { errCode: 0, message: "Media added to album" };
@@ -58,7 +61,8 @@ const addMediaToAlbum = async (albumId, mediaIds) => {
   }
 };
 
-const getAlbumById = async (albumId) => {
+const getAlbumById = async (albumId, userId) => {
+  // ← THÊM userId
   try {
     const album = await db.Album.findByPk(albumId, {
       include: [
@@ -67,11 +71,11 @@ const getAlbumById = async (albumId) => {
           through: { attributes: [] },
         },
       ],
-      raw: true,
-      nest: true,
     });
-    if (!album) return { errCode: 1, message: "Album not found" };
-    return { errCode: 0, data: album };
+    if (!album || album.userId !== userId)
+      // ← THÊM CHECK
+      return { errCode: 1, message: "Album not found" };
+    return { errCode: 0, data: album.toJSON() };
   } catch (err) {
     console.error("Error fetching album:", err);
     return { errCode: 2, message: "Error fetching album" };

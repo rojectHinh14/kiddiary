@@ -39,7 +39,6 @@ const handleUserLogin = async (email, password, res) => {
         "image",
       ],
       where: { email },
-      raw: true,
     });
 
     if (!user) {

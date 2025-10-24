@@ -6,8 +6,6 @@
     "port": 3306,
     "dialect": "mysql",
     "logging": false,
-    "raw": true,
-    "query": { "raw": true },
     "timezone": "+07:00"
   },
   "test": {
