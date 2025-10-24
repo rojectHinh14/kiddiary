@@ -5,6 +5,7 @@ import cors from "cors";
 import viewEngine from "./config/viewEngine.js";
 import initWebRoutes from "./route/web.js";
 import dotenv from "dotenv";
+import geminiRoute from "./route/geminiRoute.js";
 const path = require("path");
 dotenv.config();
 
@@ -24,6 +25,8 @@ app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 viewEngine(app);
 initWebRoutes(app);
+
+app.use("/api/gemini", geminiRoute);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
