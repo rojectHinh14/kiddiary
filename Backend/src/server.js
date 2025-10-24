@@ -6,6 +6,7 @@ import viewEngine from "./config/viewEngine.js";
 import initWebRoutes from "./route/web.js";
 import dotenv from "dotenv";
 import geminiRoute from "./route/geminiRoute.js";
+const path = require("path");
 dotenv.config();
 
 const app = express();
