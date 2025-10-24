@@ -21,7 +21,7 @@ app.use(
 app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
-
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 viewEngine(app);
 initWebRoutes(app);
 

@@ -3,6 +3,7 @@ import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
 import Home from "./pages/home/Home";
 import Profile from "./pages/profile/Profile";
+import AlbumDetail from "./pages/Album/AlbumDetail";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/login" element={<AuthPage />} />
         <Route path="home" element={<Home />} />
         <Route path="/profile" element={<Profile/>} />
+      <Route path="/albums/:id" element={<AlbumDetail />} />
       </Routes>
     </Router>
   );

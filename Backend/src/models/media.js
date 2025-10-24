@@ -26,6 +26,7 @@ fileUrl: DataTypes.TEXT("long"),
       sequelize,
       modelName: "Media",
       tableName: "Media",
+      freezeTableName: true,
     }
   );
 
