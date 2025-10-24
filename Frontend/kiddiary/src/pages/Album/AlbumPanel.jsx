@@ -1,4 +1,4 @@
-// AlbumPanel.jsx
+// AlbumPanel.jsx (cập nhật)
 import { useState, useEffect } from "react";
 import NewAlbumDialog from "./NewAlbumDialog";
 import AlbumGrid from "./AlbumGrid";
@@ -6,12 +6,18 @@ import AlbumCreateWizard from "./AlbumCreateWizard";
 import { getAllAlbumsByUserService } from "../../services/albumService";
 
 export default function AlbumPanel() {
-  const [open, setOpen] = useState(false);
-  const [openWizard, setOpenWizard] = useState(false);
-  const [pendingAlbum, setPendingAlbum] = useState(null);
+  const [openNewDialog, setOpenNewDialog] = useState(false); // ← Đổi tên cho rõ (chỉ cho NewAlbumDialog)
+  const [pendingAlbum, setPendingAlbum] = useState(null); // Giữ nguyên, chỉ dùng cho create new
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentAlbumIdForAdd, setCurrentAlbumIdForAdd] = useState(null);
+
+  // ← MỚI: State bundle cho Wizard
+  const [wizardConfig, setWizardConfig] = useState({
+    open: false,
+    albumId: null,
+    initialInfo: null, // Chỉ dùng khi create new
+  });
+
   useEffect(() => {
     fetchAlbums();
   }, []);
@@ -38,15 +44,15 @@ export default function AlbumPanel() {
     }
   };
 
-  // Khi finish wizard (tạo mới hoặc add), refetch
+  // Khi finish wizard (tạo mới hoặc add), refetch & close
   const handleFinishWizard = (selectedIds, newAlbumId = null) => {
     fetchAlbums(); // Refetch để update list và count photos
-    console.log(
-      "Finished with selected:",
-      selectedIds,
-      "Album ID:",
-      newAlbumId
-    );
+    closeWizard(); // ← MỚI: Close wizard
+  };
+
+  // ← MỚI: Helper close wizard
+  const closeWizard = () => {
+    setWizardConfig({ open: false, albumId: null, initialInfo: null });
   };
 
   if (loading) {
@@ -62,7 +68,7 @@ export default function AlbumPanel() {
           Photo albums are great for organizing and sharing your moments
         </p>
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => setOpenNewDialog(true)} // ← Đổi: Chỉ open dialog, không wizard
           className="mt-3 text-[#ff4b4b] font-medium hover:underline"
         >
           Add new album
@@ -72,35 +78,32 @@ export default function AlbumPanel() {
       {/* Grid */}
       <AlbumGrid
         albums={albums}
-        onAddClick={() => setOpen(true)}
+        onAddClick={() => setOpenNewDialog(true)} // ← Đổi: Chỉ open dialog
         onAddToAlbum={(albumId) => {
-          setCurrentAlbumIdForAdd(albumId);
-          setOpenWizard(true);
+          // ← FIX: Bundle state ngay lập tức, đảm bảo nhất quán
+          setWizardConfig({ open: true, albumId, initialInfo: null });
         }}
       />
 
       {/* Step 1: Dialog nhập title cho album mới */}
       <NewAlbumDialog
-        open={open}
-        onClose={() => setOpen(false)}
+        open={openNewDialog} // ← Đổi tên
+        onClose={() => setOpenNewDialog(false)}
         onNext={(info) => {
           setPendingAlbum(info);
-          setOpen(false);
-          setOpenWizard(true);
+          setOpenNewDialog(false); // Close dialog
+          // ← FIX: Bundle state cho create new
+          setWizardConfig({ open: true, albumId: null, initialInfo: info });
         }}
       />
 
       {/* Wizard: Chọn media và xử lý create/add */}
-      {openWizard && (
+      {wizardConfig.open && ( // ← Đổi: Dùng wizardConfig.open
         <AlbumCreateWizard
-          onClose={() => {
-            setOpenWizard(false);
-            setCurrentAlbumIdForAdd(null);
-            setPendingAlbum(null); // Reset
-          }}
-          initialAlbumInfo={currentAlbumIdForAdd ? null : pendingAlbum}
+          onClose={closeWizard} // ← Đổi: Dùng helper
+          initialAlbumInfo={wizardConfig.initialInfo} // ← Đổi: Từ config
           onFinish={handleFinishWizard}
-          albumId={currentAlbumIdForAdd || null}
+          albumId={wizardConfig.albumId} // ← Đổi: Từ config, luôn đúng
         />
       )}
     </div>

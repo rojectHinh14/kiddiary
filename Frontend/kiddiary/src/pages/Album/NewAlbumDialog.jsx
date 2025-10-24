@@ -10,8 +10,17 @@ export default function NewAlbumDialog({ open, onClose, onNext }) {
   if (!open) return null;
 
   const handleNext = () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      alert("Please enter album title"); // ← THÊM VALIDATE
+      return;
+    }
     const file = fileRef.current?.files?.[0] || null;
-    onNext?.({ title: title.trim(), description: desc.trim(), coverFile: file });
+    onNext?.({
+      title: trimmedTitle,
+      description: desc.trim(),
+      coverFile: file,
+    });
   };
 
   const handleFile = (e) => {
@@ -48,21 +57,37 @@ export default function NewAlbumDialog({ open, onClose, onNext }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Cover image (optional)</label>
+            <label className="block text-sm font-medium">
+              Cover image (optional)
+            </label>
             <div className="mt-2 flex items-center gap-3">
-              <input ref={fileRef} onChange={handleFile} type="file" accept="image/*" />
+              <input
+                ref={fileRef}
+                onChange={handleFile}
+                type="file"
+                accept="image/*"
+              />
               {preview && (
-                <img src={preview} alt="preview" className="w-24 h-20 object-cover rounded-md border" />
+                <img
+                  src={preview}
+                  alt="preview"
+                  className="w-24 h-20 object-cover rounded-md border"
+                />
               )}
             </div>
           </div>
         </div>
 
         <div className="mt-8 flex gap-4">
-          <button onClick={handleNext} className="px-5 py-2 rounded-xl bg-[#FF6B6B] text-white font-semibold">
+          <button
+            onClick={handleNext}
+            className="px-5 py-2 rounded-xl bg-[#FF6B6B] text-white font-semibold"
+          >
             Next
           </button>
-          <button onClick={onClose} className="text-[#FF6B6B] font-medium">Cancel</button>
+          <button onClick={onClose} className="text-[#FF6B6B] font-medium">
+            Cancel
+          </button>
         </div>
       </div>
     </div>
