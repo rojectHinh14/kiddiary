@@ -5,7 +5,6 @@ module.exports = {
     await queryInterface.addColumn("Media", "date", {
       type: Sequelize.DATEONLY,
       allowNull: false,
-      // Dòng đã được thay đổi ở đây
       defaultValue: Sequelize.NOW,
     });
   },

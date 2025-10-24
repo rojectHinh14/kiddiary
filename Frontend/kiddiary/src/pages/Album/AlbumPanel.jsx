@@ -1,39 +1,57 @@
 // AlbumPanel.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NewAlbumDialog from "./NewAlbumDialog";
 import AlbumGrid from "./AlbumGrid";
-import AlbumCreateWizard from "./AlbumCreateWizard"; // 👈 THÊM IMPORT NÀY
+import AlbumCreateWizard from "./AlbumCreateWizard";
+import { getAllAlbumsByUserService } from "../../services/albumService";
 
 export default function AlbumPanel() {
   const [open, setOpen] = useState(false);
   const [openWizard, setOpenWizard] = useState(false);
-  const [pendingAlbum, setPendingAlbum] = useState(null); // 👈 dữ liệu bước 1
+  const [pendingAlbum, setPendingAlbum] = useState(null);
+  const [albums, setAlbums] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentAlbumIdForAdd, setCurrentAlbumIdForAdd] = useState(null);
+  useEffect(() => {
+    fetchAlbums();
+  }, []);
 
-  const [albums, setAlbums] = useState([
-    { id: "a1", title: "First Birthday", coverUrl: "https://images.unsplash.com/photo-1548625149-9129dad7b0ec?q=80&w=1200&auto=format&fit=crop", photos: new Array(24).fill(0).map((_, i) => `p${i}`) },
-    { id: "a2", title: "Summer Picnic", coverUrl: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?q=80&w=1200&auto=format&fit=crop", photos: new Array(12).fill(0).map((_, i) => `p${i}`) },
-    { id: "a3", title: "Buddy & Doggo", coverUrl: "https://images.unsplash.com/photo-1517423440428-a5a00ad493e8?q=80&w=1200&auto=format&fit=crop", photos: new Array(9).fill(0).map((_, i) => `p${i}`) },
-  ]);
-
-  // khi finish wizard, tạo album thật (mock)
-  const handleFinishWizard = (selectedMomentIds = []) => {
-    const coverUrl = pendingAlbum?.coverFile
-      ? URL.createObjectURL(pendingAlbum.coverFile)
-      : "https://placehold.co/800x600?text=Album";
-
-    const newAlbum = {
-      id: crypto.randomUUID(),
-      title: pendingAlbum?.title || "Untitled album",
-      coverUrl,
-      description: pendingAlbum?.description || "",
-      photos: selectedMomentIds, // ở đây mình lưu id; bạn có thể map sang url
-      createdAt: new Date().toISOString(),
-    };
-
-    setAlbums((prev) => [newAlbum, ...prev]);
-    setOpenWizard(false);
-    setPendingAlbum(null);
+  const fetchAlbums = async () => {
+    try {
+      setLoading(true);
+      const response = await getAllAlbumsByUserService();
+      if (response.data.errCode === 0) {
+        const mappedAlbums = response.data.data.map((album) => ({
+          ...album,
+          title: album.albumName,
+          coverUrl: album.Media?.[0]?.fileUrl
+            ? `http://localhost:8080${album.Media[0].fileUrl}`
+            : "https://placehold.co/400x300?text=No+Cover",
+          photos: album.Media || [],
+        }));
+        setAlbums(mappedAlbums);
+      }
+    } catch (error) {
+      console.error("Error fetching albums:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Khi finish wizard (tạo mới hoặc add), refetch
+  const handleFinishWizard = (selectedIds, newAlbumId = null) => {
+    fetchAlbums(); // Refetch để update list và count photos
+    console.log(
+      "Finished with selected:",
+      selectedIds,
+      "Album ID:",
+      newAlbumId
+    );
+  };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading albums...</div>;
+  }
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -43,31 +61,46 @@ export default function AlbumPanel() {
         <p className="text-gray-600 mt-1">
           Photo albums are great for organizing and sharing your moments
         </p>
-        <button onClick={() => setOpen(true)} className="mt-3 text-[#ff4b4b] font-medium hover:underline">
+        <button
+          onClick={() => setOpen(true)}
+          className="mt-3 text-[#ff4b4b] font-medium hover:underline"
+        >
           Add new album
         </button>
       </div>
 
       {/* Grid */}
-      <AlbumGrid albums={albums} onAddClick={() => setOpen(true)} />
+      <AlbumGrid
+        albums={albums}
+        onAddClick={() => setOpen(true)}
+        onAddToAlbum={(albumId) => {
+          setCurrentAlbumIdForAdd(albumId);
+          setOpenWizard(true);
+        }}
+      />
 
-      {/* Step 1: Dialog nhập thông tin */}
+      {/* Step 1: Dialog nhập title cho album mới */}
       <NewAlbumDialog
         open={open}
         onClose={() => setOpen(false)}
         onNext={(info) => {
-          setPendingAlbum(info);  // lưu dữ liệu
-          setOpen(false);         // đóng dialog
-          setOpenWizard(true);    // 👉 mở bước 2
+          setPendingAlbum(info);
+          setOpen(false);
+          setOpenWizard(true);
         }}
       />
 
-      {/* Step 2: Wizard chọn moments */}
+      {/* Wizard: Chọn media và xử lý create/add */}
       {openWizard && (
         <AlbumCreateWizard
-          onClose={() => setOpenWizard(false)}
-          initialAlbumInfo={pendingAlbum}
-          onFinish={handleFinishWizard} // trả về mảng id moments đã chọn
+          onClose={() => {
+            setOpenWizard(false);
+            setCurrentAlbumIdForAdd(null);
+            setPendingAlbum(null); // Reset
+          }}
+          initialAlbumInfo={currentAlbumIdForAdd ? null : pendingAlbum}
+          onFinish={handleFinishWizard}
+          albumId={currentAlbumIdForAdd || null}
         />
       )}
     </div>
