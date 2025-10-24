@@ -1,5 +1,5 @@
 // AlbumCreateWizard.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getAllMediaByUserService } from "../../services/mediaService";
 import {
   createAlbumService,
@@ -13,13 +13,14 @@ export default function AlbumCreateWizard({
   albumId = null,
 }) {
   const [step, setStep] = useState(2);
-  const [albumInfo] = useState(
-    initialAlbumInfo || { title: "", description: "", coverFile: null }
+  const albumInfo = useMemo(
+    () => initialAlbumInfo || { title: "", description: "", coverFile: null },
+    [initialAlbumInfo]
   );
   const [medias, setMedias] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   useEffect(() => {
     fetchMedias();
   }, []);
@@ -56,37 +57,37 @@ export default function AlbumCreateWizard({
   };
 
   const finish = async () => {
-    if (selectedIds.length === 0) {
-      alert("Please select at least one moment"); // toast notifi
-      return;
-    }
+    if (selectedIds.length === 0 || isSubmitting) return;
+    setIsSubmitting(true);
 
     try {
       let newAlbumId = albumId;
       if (!albumId) {
-        // Mode tạo mới: Create album trước
         const createResponse = await createAlbumService({
-          albumName: albumInfo?.title || "Untitled album",
+          albumName: albumInfo.title || "Untitled album", // ← Đảm bảo title từ dialog
           albumTypeCode: "NORMAL",
         });
         if (createResponse.data.errCode !== 0) {
           throw new Error("Failed to create album");
         }
         newAlbumId = createResponse.data.data.id;
+      } else {
+        console.log("DEBUG: Adding to existing albumId:", albumId); // ← THÊM
       }
 
-      // Add selected media vào album
       const addResponse = await addMediaToAlbumService(newAlbumId, selectedIds);
       if (addResponse.data.errCode === 0) {
         onFinish?.(selectedIds, newAlbumId);
         onClose();
       } else {
+        console.error("DEBUG: Add response error:", addResponse); // ← THÊM
         throw new Error("Failed to add media");
       }
     } catch (error) {
       console.error("Error in finish:", error);
-      // Show error toast
       alert("Failed to add moments");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -99,7 +100,7 @@ export default function AlbumCreateWizard({
   }
 
   const title = albumId ? "Add moments to album" : "Add moments to new album";
-  const subtitle = albumId ? "" : albumInfo?.title;
+  const subtitle = albumId ? "" : albumInfo.title;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
@@ -142,12 +143,21 @@ export default function AlbumCreateWizard({
           </div>
           <button
             onClick={finish}
-            disabled={selectedIds.length === 0}
+            disabled={selectedIds.length === 0 || isSubmitting} // ← THÊM isSubmitting
             className="px-6 py-2 rounded-md bg-[#FF6B6B] text-white font-semibold disabled:opacity-50"
           >
-            {albumId ? "Add moments to album" : "Create album with moments"}
+            {isSubmitting
+              ? "Processing..."
+              : albumId
+              ? "Add moments to album"
+              : "Create album with moments"}{" "}
+            // ← THÊM loading text
           </button>
-          <button onClick={onClose} className="ml-4 text-[#FF6B6B] font-medium">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting} // ← THÊM disable cancel khi submitting
+            className="ml-4 text-[#FF6B6B] font-medium disabled:opacity-50"
+          >
             Cancel
           </button>
         </div>
