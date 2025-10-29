@@ -13,12 +13,16 @@ import { format } from "date-fns";
 import AlbumPanel from "../Album/AlbumPanel";
 import ChildrenPanel from "../child/ChildrenPanel";
 import ChatBox from "../../components/ChatBox";
+import BabyOverviewPanel from "../health/BabyOverviewPanel";
+import VaccinationSchedulePage from "../health/VaccinationSchedulePage";
+import SleepTrackerPage from "../health/SleepTrackerPage";
 
 export default function Home() {
   const [posts, setPosts] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("moment");
+  const [healthView, setHealthView] = useState("overview");
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -149,12 +153,16 @@ export default function Home() {
             >
               Album
             </button>
-            <button
-              onClick={() => setTab("family")}
-              className="px-4 py-2 text-sm rounded-full hover:bg-black/5"
-            >
-              Family &amp; Friend
-            </button>
+         <button
+  onClick={() => setTab("health")}
+  className={`px-4 py-2 text-sm rounded-full ${
+    tab === "health"
+      ? "bg-[#2CC1AE] text-white font-medium shadow-[0_2px_0_rgba(0,0,0,0.06)]"
+      : "hover:bg-black/5"
+  }`}
+>
+  Health
+</button>
             <button
               onClick={() => setTab("children")}
               className="px-4 py-2 text-sm rounded-full hover:bg-black/5"
@@ -165,7 +173,7 @@ export default function Home() {
         </aside>
 
         {/* Main */}
-        <main className="flex-1 px-8 pb-16 pt-8">
+        <main className="flex-1 ">
           {tab === "moment" && (
             <>
               <button
@@ -189,9 +197,24 @@ export default function Home() {
 
           {tab === "album" && <AlbumPanel/>}
 
-          {tab === "family" && (
-            <div className="text-gray-500">👨‍👩‍👧 Family & Friend</div>
-          )}
+        {tab === "health" && (
+  <div className="px-4 md:px-5 lg:px-6 py-4">
+    <div className="mx-auto w-full max-w-[1120px]">
+      {healthView === "overview" && (
+        <BabyOverviewPanel
+          onOpenVaccination={() => setHealthView("vaccination")}
+          onOpenSleep={() => setHealthView("sleep")}
+        />
+      )}
+      {healthView === "vaccination" && (
+        <VaccinationSchedulePage onBack={() => setHealthView("overview")} />
+      )}
+      {healthView === "sleep" && (
+        <SleepTrackerPage onBack={() => setHealthView("overview")} />
+      )}
+    </div>
+  </div>
+)}
 
           {tab === "children" && <ChildrenPanel/>}
           {tab === "profile" && <Profile />}
