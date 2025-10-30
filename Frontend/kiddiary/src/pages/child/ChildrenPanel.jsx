@@ -1,19 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ChildForm from "./ChildForm";
 import ChildCard from "../../components/child/ChildCard";
+import { getChildrenService } from "../../services/childService";
 
 export default function ChildrenPanel() {
-  const [children, setChildren] = useState([
-    { id: 1, firstName: "Nguyen", gender: "Male", photo: null },
-  ]);
+  const [children, setChildren] = useState([]);
   const [openForm, setOpenForm] = useState(false);
 
-  const handleAddChild = (childData) => {
-    const newChild = {
-      id: crypto.randomUUID(),
-      ...childData,
-    };
-    setChildren((prev) => [...prev, newChild]);
+  const fetchChildren = async () => {
+    try {
+      const res = await getChildrenService();
+      if (res.data?.errCode === 0) {
+        setChildren(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchChildren();
+  }, []);
+
+  const handleAddChild = (child) => {
+    setChildren((prev) => [...prev, child]);
     setOpenForm(false);
   };
 
@@ -21,9 +31,10 @@ export default function ChildrenPanel() {
     <div className="min-h-screen bg-[#FFF9F0] px-8 py-10">
       <h1 className="text-3xl font-semibold text-center mb-8">Children</h1>
 
-      <div className="flex justify-center gap-10">
+      <div className="flex justify-center gap-10 flex-wrap">
         {children.map((child) => (
-          <ChildCard key={child.id} child={child} />))}
+          <ChildCard key={child.id} child={child} />
+        ))}
 
         <div
           onClick={() => setOpenForm(true)}
