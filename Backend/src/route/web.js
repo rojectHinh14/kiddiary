@@ -3,6 +3,7 @@ import homeController from "../controllers/homeController";
 import userController from "../controllers/userController.js";
 import mediaController from "../controllers/mediaController.js";
 import albumController from "../controllers/albumController.js";
+import childController from "../controllers/childController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 let router = express.Router();
 let initWebRoutes = (app) => {
@@ -31,6 +32,9 @@ let initWebRoutes = (app) => {
   //view album
   router.get("/api/albums/:albumId", verifyToken, albumController.getAlbumById);
 
+  //child
+  router.post("/api/children", verifyToken, childController.addChild);
+  router.get("/api/children", verifyToken, childController.getChildrenByUser);
   return app.use("/", router);
 };
 

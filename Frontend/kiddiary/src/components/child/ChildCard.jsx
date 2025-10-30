@@ -2,8 +2,12 @@ export default function ChildCard({ child }) {
   return (
     <div className="flex flex-col items-center">
       <div className="w-40 h-40 rounded-full border flex items-center justify-center overflow-hidden bg-white">
-        {child.photo ? (
-          <img src={child.photo} alt={child.firstName} className="object-cover w-full h-full" />
+        {child.avatarUrl ? (
+          <img
+            src={`${import.meta.env.VITE_BACKEND_URL}${child.avatarUrl}`}
+            alt={child.firstName}
+            className="object-cover w-full h-full"
+          />
         ) : (
           <svg
             xmlns="http://www.w3.org/2000/svg"
