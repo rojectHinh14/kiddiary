@@ -41,8 +41,15 @@ const getAllMediaByUser = async (userId) => {
   try {
     const media = await db.Media.findAll({
       where: { userId },
+      include: [
+        {
+          model: db.User,
+          attributes: ["firstName", "lastName", "email", "image"],
+        },
+      ],
       order: [["date", "DESC"]],
     });
+
     return { errCode: 0, data: media };
   } catch (err) {
     console.error("Error fetching media:", err);
