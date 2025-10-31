@@ -10,7 +10,7 @@ export default function AlbumGrid({ albums, onAddClick, onAddToAlbum }) {
         <AlbumCard
           key={a.id}
           album={a}
-          onOpen={() => navigate(`/albums/${a.id}`)}
+          onOpen={() => navigate(`/home/album/${a.id}`)} // ✅ Đúng route prefix
           onAddToAlbum={() => onAddToAlbum?.(a.id)}
         />
       ))}
