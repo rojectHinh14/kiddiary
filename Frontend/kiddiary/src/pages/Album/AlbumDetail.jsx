@@ -1,5 +1,5 @@
 // src/pages/Album/AlbumDetail.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { getAlbumByIdService } from "../../services/albumService";
@@ -13,65 +13,88 @@ export default function AlbumDetail() {
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await getAlbumByIdService(id);
-        if (res.data?.errCode === 0) {
-          const a = res.data.data;
-          setAlbum({
-            ...a,
-            title: a.albumName,
-            year: new Date(a.createdAt).getFullYear(),
-            description: a.description || "No description yet.",
-            items: (a.Media || []).map((m) => ({
-              id: m.id,
-              img: m.fileUrl?.startsWith("/")
-                ? `${import.meta.env.VITE_BACKEND_URL}${m.fileUrl}`
-                : m.fileUrl,
-              title: m.description || "Untitled",
-              date: m.date || a.createdAt,
-              desc: m.aiTags || "",
-            })),
-          });
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
+  // select mode
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
+
+  const mapResponse = (a) => ({
+    ...a,
+    title: a.albumName,
+    year: new Date(a.createdAt).getFullYear(),
+    description: a.description || "No description yet.",
+    items: (a.Media || []).map((m) => ({
+      id: m.id,
+      img: m.fileUrl?.startsWith("/")
+        ? `${import.meta.env.VITE_BACKEND_URL}${m.fileUrl}`
+        : m.fileUrl,
+      title: m.description || "Untitled",
+      date: m.date || a.createdAt,
+      desc: m.aiTags || "",
+    })),
+  });
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getAlbumByIdService(id);
+      if (res.data?.errCode === 0) setAlbum(mapResponse(res.data.data));
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  const handleFinishAdd = () => {
-    // refetch
-    setShowWizard(false);
-    // re-run effect
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await getAlbumByIdService(id);
-        if (res.data?.errCode === 0) {
-          const a = res.data.data;
-          setAlbum({
-            ...a,
-            title: a.albumName,
-            year: new Date(a.createdAt).getFullYear(),
-            description: a.description || "No description yet.",
-            items: (a.Media || []).map((m) => ({
-              id: m.id,
-              img: m.fileUrl?.startsWith("/")
-                ? `${import.meta.env.VITE_BACKEND_URL}${m.fileUrl}`
-                : m.fileUrl,
-              title: m.description || "Untitled",
-              date: m.date || a.createdAt,
-              desc: m.aiTags || "",
-            })),
-          });
-        }
-      } finally {
-        setLoading(false);
+  useEffect(() => { refetch(); }, [refetch]);
+
+  // ESC to exit select mode
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setSelectMode(false);
+        setSelected(new Set());
       }
-    })();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const handleFinishAdd = async () => {
+    setShowWizard(false);
+    await refetch();
+  };
+
+  // --- select helpers ---
+  const toggleSelect = (mediaId) => {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(mediaId)) n.delete(mediaId);
+      else n.add(mediaId);
+      return n;
+    });
+  };
+
+  const selectAll = () => {
+    if (!album?.items?.length) return;
+    setSelected(new Set(album.items.map((x) => x.id)));
+  };
+
+  const clearSelect = () => setSelected(new Set());
+
+  const handleRemove = async () => {
+    if (selected.size === 0) return;
+    const confirmText =
+      selected.size === 1
+        ? "Remove this moment from the album?"
+        : `Remove ${selected.size} moments from the album?`;
+    if (!confirm(confirmText)) return;
+
+    // API: bạn cần có service này trong albumService
+    // removeItemsFromAlbumService(albumId: string|number, mediaIds: number[])
+    // const res = await removeItemsFromAlbumService(id, Array.from(selected));
+    // if (res?.data?.errCode === 0) {
+    //   await refetch();
+    //   setSelectMode(false);
+    //   setSelected(new Set());
+    // }
   };
 
   /* ---------- UI ---------- */
@@ -110,13 +133,14 @@ export default function AlbumDetail() {
   }
 
   const total = album.items.length;
+  const selectedCount = selected.size;
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6">
 
       {/* Sticky toolbar */}
       <div className="sticky top-0 z-10 -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 backdrop-blur bg-[#FFF9F0]/70 border-b">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 rounded-xl px-3 py-2 border hover:bg-black/5"
@@ -125,12 +149,54 @@ export default function AlbumDetail() {
             <span className="font-medium">Back</span>
           </button>
 
-          <button
-            onClick={() => setShowWizard(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B6B] text-white px-4 py-2 font-medium shadow hover:brightness-95"
-          >
-            ＋ Add more moments
-          </button>
+          {!selectMode ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectMode(true)}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-medium hover:bg-black/5"
+                title="Select moments to remove"
+              >
+                Select
+              </button>
+              <button
+                onClick={() => setShowWizard(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B6B] text-white px-4 py-2 font-medium shadow hover:brightness-95"
+              >
+                ＋ Add more moments
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={selectAll}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-black/5"
+                title="Select all"
+              >
+                Select all
+              </button>
+              <button
+                onClick={clearSelect}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-black/5"
+                title="Clear"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleRemove}
+                disabled={selectedCount === 0}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 font-medium shadow
+                  ${selectedCount === 0 ? "bg-red-200 text-white cursor-not-allowed" : "bg-red-600 text-white hover:bg-red-700"}`}
+              >
+                Remove {selectedCount > 0 ? `(${selectedCount})` : ""}
+              </button>
+              <button
+                onClick={() => { setSelectMode(false); setSelected(new Set()); }}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-black/5"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -166,35 +232,64 @@ export default function AlbumDetail() {
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {album.items.map((it) => (
-            <figure
-              key={it.id}
-              className="group overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="relative">
-                <img
-                  src={it.img}
-                  alt={it.title}
-                  className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                />
-                {/* overlay */}
-                <figcaption className="absolute inset-x-0 bottom-0 p-3 sm:p-4 bg-gradient-to-t from-black/60 to-transparent text-white">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{it.title}</div>
-                      {it.desc && (
-                        <div className="truncate text-xs opacity-90">{it.desc}</div>
+        <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 ${selectMode ? "select-none" : ""}`}>
+          {album.items.map((it) => {
+            const checked = selected.has(it.id);
+            return (
+              <figure
+                key={it.id}
+                className={`group overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow ${
+                  checked ? "ring-2 ring-red-400" : ""
+                }`}
+                onClick={() => {
+                  if (selectMode) toggleSelect(it.id);
+                }}
+              >
+                <div className="relative">
+                  <img
+                    src={it.img}
+                    alt={it.title}
+                    className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+
+                  {/* checkbox overlay khi selectMode */}
+                  {selectMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(it.id); }}
+                      className={`absolute top-3 left-3 h-7 w-7 rounded-full border-2 flex items-center justify-center backdrop-blur
+                        ${checked ? "bg-red-500 border-red-500" : "bg-white/80 border-white"}
+                      `}
+                      title={checked ? "Unselect" : "Select"}
+                    >
+                      {checked ? (
+                        <svg viewBox="0 0 20 20" className="h-4 w-4 text-white">
+                          <path d="M7.5 13.1 3.9 9.5l-1.4 1.4L7.5 16 18 5.5 16.6 4.1z" />
+                        </svg>
+                      ) : (
+                        <span className="block h-3 w-3 rounded-full bg-black/20" />
                       )}
+                    </button>
+                  )}
+
+                  {/* caption */}
+                  <figcaption className="absolute inset-x-0 bottom-0 p-3 sm:p-4 bg-gradient-to-t from-black/60 to-transparent text-white">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold">{it.title}</div>
+                        {it.desc && (
+                          <div className="truncate text-xs opacity-90">{it.desc}</div>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                        {format(new Date(it.date), "MMM dd")}
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs">
-                      {format(new Date(it.date), "MMM dd")}
-                    </span>
-                  </div>
-                </figcaption>
-              </div>
-            </figure>
-          ))}
+                  </figcaption>
+                </div>
+              </figure>
+            );
+          })}
         </div>
       )}
 

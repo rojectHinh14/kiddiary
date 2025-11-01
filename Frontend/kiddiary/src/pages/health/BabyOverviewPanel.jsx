@@ -164,12 +164,11 @@ const calculateBMI = (weight, height) => {
 };
 
 const getAvatarSrc = (avatarUrl) => {
-  if (avatarUrl.startsWith("http")) {
-    return avatarUrl;
-  }
-  return `http://localhost:8080${avatarUrl}`; // Adjust base URL if needed
+  if (!avatarUrl) return undefined;               
+  return avatarUrl.startsWith("http")
+    ? avatarUrl
+    : `http://localhost:8080${avatarUrl}`;
 };
-
 // ---------- main component ----------
 export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
   const [children, setChildren] = useState([]);
@@ -260,7 +259,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
               <div className="flex items-center gap-3 md:gap-4">
                 <Avatar
                   sx={{ width: 44, height: 44 }}
-                  src={getAvatarSrc(selectedChild.avatarUrl)}
+                  src={getAvatarSrc(selectedChild?.avatarUrl)} 
                 />
                 <div
                   style={{
@@ -346,6 +345,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
         <Tile
           title="Daily Milk Log"
           icon={<LocalDrinkRoundedIcon />}
+          onClick={() => navigate("/home/health/milk")}
           bg="#CFE6FF"
         />
       </div>
