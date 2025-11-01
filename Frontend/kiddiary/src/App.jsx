@@ -21,6 +21,9 @@ import GrowthPage from "./pages/health/bmi/GrowthPage";
 import GrowthAddPage from "./pages/health/bmi/GrowthAddPage";
 import WhoStandardPage from "./pages/health/bmi/WhoStandardPage";
 import VaccinationSummaryPage from "./pages/health/VaccinationSummaryPage";
+import MilkOverviewPage from "./pages/health/milk/MilkOverviewPage";
+import MilkHistoryPage from "./pages/health/milk/MilkHistoryPage";
+import MilkAddPage from "./pages/health/milk/MilkAddPage";
 
 function App() {
   return (
@@ -52,7 +55,9 @@ function App() {
             <Route path="growth" element={<GrowthPage />} />
             <Route path="growth/new" element={<GrowthAddPage />} />
             <Route path="/home/health/growth/who-standard" element={<WhoStandardPage />} />
-          </Route>
+<Route path="milk" element={<MilkOverviewPage />} />
+    <Route path="milk/history" element={<MilkHistoryPage />} />
+    <Route path="milk/new" element={<MilkAddPage />} />          </Route>
 
           <Route path="profile" element={<Profile />} />
         </Route>
