@@ -23,7 +23,6 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const fileRef = useRef(null);
 
-  // Fetch profile khi component mount
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -137,7 +136,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFD] p-6 sm:p-10">
+    <div className="min-h-screen bg-[#FAFAFD] sm:p-10">
       {/* Card */}
       <div className="mx-auto w-full max-w-5xl rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
         {/* Header */}
@@ -209,7 +208,7 @@ export default function Profile() {
             )}
           </div>
         </div>
-
+ 
         {/* Form */}
         <form onSubmit={save} className="p-6 sm:p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

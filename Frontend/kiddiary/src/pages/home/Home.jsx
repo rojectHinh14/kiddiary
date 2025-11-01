@@ -39,7 +39,7 @@ export default function Home() {
             `${media.User.firstName} ${media.User.lastName}`.trim();
           return {
             id: media.id.toString(),
-            username: fullName || "Unknown User", // Fix: dùng real name
+            username: fullName || "Unknown User", 
             date: format(new Date(media.date), "dd MMM yyyy"),
             caption: media.description || "(No caption)",
             images: [`${import.meta.env.VITE_BACKEND_URL}${media.fileUrl}`],
@@ -216,7 +216,7 @@ export default function Home() {
           {tab === "calendar" && <CalendarPage />}
           {tab === "album" && <AlbumPanel />}
           {tab === "health" && (
-            <div className="px-4 md:px-5 lg:px-6 py-4">
+            <div className="px-4 md:px-5 lg:px-6 py-4 bg-white">
               <div className="mx-auto w-full max-w-[1120px]">
                 {healthView === "overview" && (
                   <BabyOverviewPanel

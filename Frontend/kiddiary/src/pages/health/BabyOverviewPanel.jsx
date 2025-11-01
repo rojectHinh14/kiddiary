@@ -24,6 +24,7 @@ import PsychologyRoundedIcon from "@mui/icons-material/PsychologyRounded";
 import BabyChangingStationRoundedIcon from "@mui/icons-material/BabyChangingStationRounded";
 import ScaleRoundedIcon from "@mui/icons-material/ScaleRounded";
 import { getChildrenService } from "../../services/childService";
+import { useNavigate } from "react-router-dom";
 
 // ---------- helpers ----------
 const Stat = ({ label, value, unit }) => (
@@ -175,6 +176,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
   const [selectedChild, setSelectedChild] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchChildren = async () => {
@@ -236,7 +238,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
+    <div className="p-4 md:p-6 lg:p-8 bg-white">
       {/* top card */}
       <Card
         elevation={0}
@@ -348,7 +350,12 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
         />
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Tile title="Weight, Height" icon={<ScaleRoundedIcon />} bg="#BFEDE1" />
+        <Tile
+        title="Weight, Height"
+        icon={<ScaleRoundedIcon />}
+        bg="#BFEDE1"
+        onClick={() => navigate("/home/health/growth")}
+      />
         <Tile
           title="Sleep Tracker"
           icon={<BedtimeRoundedIcon />}

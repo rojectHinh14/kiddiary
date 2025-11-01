@@ -1,47 +1,60 @@
 // ProfileMenu.jsx
 import React, { useState, useEffect } from "react";
 import { Avatar, Menu, MenuItem, Divider } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { getUserProfileService } from "../../services/userService";
+// (tuỳ) import axios từ nơi bạn cấu hình instance
+// import axios from "../../services/axios"; 
 
 export default function ProfileMenu({ onOpenProfile, onLogout }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const open = Boolean(anchorEl);
+  const navigate = useNavigate();
 
-  const handleClick = (event) => setAnchorEl(event.currentTarget);
+  const handleClick = (e) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
-  const handleLogout = () => {
-    handleClose();
-    onLogout?.(); // gọi callback logout từ Home
-  };
+  // --- DEFAULT HANDLERS (khi parent không truyền props) ---
+  const gotoProfile = onOpenProfile ?? (() => navigate("/profile"));
+  const doLogout =
+    onLogout ??
+    (() => {
+      try {
+        localStorage.removeItem("token");
+        // Nếu bạn set Authorization default cho axios, clear luôn:
+        // axios.defaults.headers.common["Authorization"] = "";
+      } finally {
+        navigate("/login", { replace: true });
+      }
+    });
 
-  // Fetch user profile khi mount
+  // ---- Helpers ----
+  const absUrl = (img) =>
+    img?.startsWith("http") ? img : `${import.meta.env.VITE_BACKEND_URL}${img}`;
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
-        const response = await getUserProfileService();
-        if (response.data && response.data.errCode === 0) {
-          const user = response.data.data;
+        const res = await getUserProfileService();
+        if (res?.data?.errCode === 0) {
+          const u = res.data.data || {};
           setUserData({
-            name:
-              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-              "Username",
-            email: user.email || "user@email.com",
-            image: user.image || "https://i.pravatar.cc/100?img=12", // Fallback mock
+            name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Username",
+            email: u.email || "user@email.com",
+            image: u.image || "https://i.pravatar.cc/100?img=12",
           });
         } else {
-          console.error(
-            "Failed to fetch user profile:",
-            response.data?.message
-          );
-          // Có thể fallback hoặc redirect login
+          // fallback
+          setUserData({
+            name: "Username",
+            email: "user@email.com",
+            image: "https://i.pravatar.cc/100?img=12",
+          });
         }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        // Fallback mock nếu fail
+      } catch (e) {
         setUserData({
           name: "Username",
           email: "user@email.com",
@@ -51,12 +64,10 @@ export default function ProfileMenu({ onOpenProfile, onLogout }) {
         setLoading(false);
       }
     };
-
     fetchUserProfile();
   }, []);
 
-  // Fallback data nếu chưa load xong
-  const displayData = userData || {
+  const display = userData || {
     name: "Username",
     email: "user@email.com",
     image: "https://i.pravatar.cc/100?img=12",
@@ -64,9 +75,8 @@ export default function ProfileMenu({ onOpenProfile, onLogout }) {
 
   return (
     <div>
-      {/* Avatar trigger */}
       <Avatar
-        src={`${import.meta.env.VITE_BACKEND_URL}${displayData.image}`}
+        src={absUrl(display.image)}
         alt="profile"
         onClick={handleClick}
         className="cursor-pointer w-10 h-10 border"
@@ -76,42 +86,34 @@ export default function ProfileMenu({ onOpenProfile, onLogout }) {
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
-        PaperProps={{
-          className: "rounded-xl shadow-xl mt-2 min-w-[240px] overflow-hidden",
-        }}
+        PaperProps={{ className: "rounded-xl shadow-xl mt-2 min-w-[240px] overflow-hidden" }}
       >
-        {/* Info */}
         <div className="px-4 py-3 flex items-center gap-3">
-          <Avatar
-            src={`${import.meta.env.VITE_BACKEND_URL}${displayData.image}`}
-            alt="profile"
-            className="w-12 h-12"
-          />
+          <Avatar src={absUrl(display.image)} alt="profile" className="w-12 h-12" />
           <div>
             <div className="font-semibold text-base text-gray-800">
-              {loading ? "Đang tải..." : displayData.name}
+              {loading ? "Đang tải..." : display.name}
             </div>
-            <div className="text-sm text-gray-500">
-              {loading ? "" : displayData.email}
-            </div>
+            <div className="text-sm text-gray-500">{loading ? "" : display.email}</div>
           </div>
         </div>
 
         <Divider />
 
-        {/* Buttons */}
         <MenuItem
           onClick={() => {
-            handleClose();
-            onOpenProfile?.(); // 👈 gọi callback
-          }}
+      onOpenProfile ? onOpenProfile() : navigate("/home/profile");
+    }}
           className="hover:bg-gray-100 text-gray-700"
         >
           Hồ sơ cá nhân
         </MenuItem>
 
         <MenuItem
-          onClick={handleLogout}
+          onClick={() => {
+            handleClose();
+            doLogout();      // dùng default nếu prop không có
+          }}
           className="hover:bg-gray-100 text-red-500 font-medium"
         >
           Đăng xuất
