@@ -33,6 +33,19 @@ const addChild = async (data) => {
       avatarUrl, // nếu có
     });
 
+    const vaccines = await db.Vaccine.findAll();
+    if (!vaccines || vaccines.length === 0) {
+      console.warn("⚠️ No vaccine found. Please seed the Vaccine table first.");
+    } else {
+      const childVaccines = vaccines.map((vaccine) => ({
+        childId: newChild.id,
+        vaccineId: vaccine.id,
+        status: "not_injected", // default
+      }));
+
+      await db.ChildVaccine.bulkCreate(childVaccines);
+    }
+
     return {
       errCode: 0,
       errMessage: "Child added successfully",
@@ -81,7 +94,161 @@ const getChildrenByUser = async (userId) => {
   }
 };
 
+const getVaccinesByChild = async (childId) => {
+  try {
+    const vaccines = await db.ChildVaccine.findAll({
+      where: { childId },
+      include: [
+        {
+          model: db.Vaccine,
+          attributes: [
+            "id",
+            "vaccineName",
+            "vaccinationType",
+            "diseaseName",
+            "description",
+          ],
+        },
+        {
+          model: db.AllCode,
+          as: "statusData",
+          attributes: ["keyMap", "valueEn", "valueVi"],
+        },
+      ],
+      attributes: ["id", "status", "updateTime", "note"],
+      order: [[db.Vaccine, "id", "ASC"]],
+    });
+
+    if (!vaccines || vaccines.length === 0) {
+      return {
+        errCode: 0,
+        errMessage: "No vaccines found for this child",
+        data: [],
+      };
+    }
+
+    return {
+      errCode: 0,
+      errMessage: "Get child vaccines successfully",
+      data: vaccines,
+    };
+  } catch (error) {
+    console.error("Error in getVaccinesByChild:", error);
+    return {
+      errCode: 1,
+      errMessage: "Error fetching child vaccines",
+      error: error.message,
+    };
+  }
+};
+const getChildVaccineDetail = async (childId, vaccineId) => {
+  try {
+    const record = await db.ChildVaccine.findOne({
+      where: { childId, vaccineId },
+      include: [
+        {
+          model: db.Vaccine,
+          attributes: [
+            "id",
+            "vaccineName",
+            "vaccinationType",
+            "diseaseName",
+            "description",
+            "about",
+            "required",
+            "recommendedDate",
+            "symptoms",
+          ],
+        },
+        {
+          model: db.AllCode,
+          as: "statusData",
+          attributes: ["keyMap", "valueEn", "valueVi"],
+        },
+      ],
+      attributes: [
+        "id",
+        "childId",
+        "vaccineId",
+        "status",
+        "updateTime",
+        "note",
+      ],
+    });
+
+    if (!record) {
+      return {
+        errCode: 1,
+        errMessage: "No vaccine found for this childId and vaccineId",
+      };
+    }
+
+    return {
+      errCode: 0,
+      errMessage: "Get child vaccine detail successfully",
+      data: record,
+    };
+  } catch (error) {
+    console.error("Error in getChildVaccineDetail:", error);
+    return {
+      errCode: 1,
+      errMessage: "Error fetching child vaccine detail",
+      error: error.message,
+    };
+  }
+};
+
+const updateChildVaccineStatus = async (data) => {
+  try {
+    const { childId, vaccineId, status, updateTime, note } = data;
+
+    const validStatus = await db.AllCode.findOne({
+      where: { keyMap: status, type: "VACCINE_STATUS" },
+    });
+
+    if (!validStatus) {
+      return {
+        errCode: 2,
+        errMessage: `Invalid vaccine status: ${status}`,
+      };
+    }
+
+    const record = await db.ChildVaccine.findOne({
+      where: { childId, vaccineId },
+    });
+
+    if (!record) {
+      return {
+        errCode: 1,
+        errMessage: "Vaccine record not found for this child",
+      };
+    }
+
+    record.status = status;
+    record.updateTime = updateTime || new Date();
+    if (note !== undefined) record.note = note;
+
+    await record.save();
+
+    return {
+      errCode: 0,
+      errMessage: "Update vaccine status successfully",
+      data: record,
+    };
+  } catch (error) {
+    console.error("Error in updateChildVaccineStatus:", error);
+    return {
+      errCode: 1,
+      errMessage: "Error updating vaccine status",
+      error: error.message,
+    };
+  }
+};
+
 export default {
   addChild,
   getChildrenByUser,
+  getVaccinesByChild,
+  getChildVaccineDetail,
+  updateChildVaccineStatus,
 };
