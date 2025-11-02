@@ -7,6 +7,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "userId",
         as: "parent",
       });
+      ChildProfile.hasMany(models.ChildVaccine, {
+        foreignKey: "childId",
+        as: "vaccines",
+      });
     }
   }
 

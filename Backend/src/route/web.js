@@ -35,6 +35,22 @@ let initWebRoutes = (app) => {
   //child
   router.post("/api/children", verifyToken, childController.addChild);
   router.get("/api/children", verifyToken, childController.getChildrenByUser);
+  router.get(
+    "/api/children/:childId/vaccines",
+    verifyToken,
+    childController.getVaccinesByChild
+  );
+  router.get(
+    "/api/children/:childId/vaccines/:vaccineId",
+    verifyToken,
+    childController.getChildVaccineDetail
+  );
+  router.put(
+    "/api/children/:childId/vaccines/:vaccineId",
+    verifyToken,
+    childController.updateChildVaccineStatus
+  );
+
   return app.use("/", router);
 };
 
