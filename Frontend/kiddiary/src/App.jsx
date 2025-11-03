@@ -48,6 +48,7 @@ function App() {
           <Route path="health">
             <Route index element={<HealthOverview />} />
             <Route path="vaccination" element={<VaccinationSchedulePage />} />
+            <Route path="vaccination/:childId" element={<VaccinationSchedulePage />} />
             <Route path="vaccination/summary" element={<VaccinationSummaryPage />} />
             <Route path="sleep" element={<SleepTrackerPage />} />
             <Route path="sleep/new" element={<SleepAddPage />} />
