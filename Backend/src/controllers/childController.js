@@ -26,7 +26,7 @@ const addChild = async (req, res) => {
       height,
       genderCode,
       avatarBase64,
-    } = req.body; // Đổi thành avatarBase64
+    } = req.body; 
 
     if (!firstName || !lastName || !dob) {
       return res.status(400).json({

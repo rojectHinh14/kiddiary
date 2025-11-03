@@ -340,7 +340,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           title="Vaccination Schedule"
           icon={<VaccinesRoundedIcon />}
           bg="#F2CCFF"
-          onClick={onOpenVaccination}
+          onClick={() => navigate(`/home/health/vaccination/${selectedChild?.id}`)}
         />
         <Tile
           title="Daily Milk Log"
