@@ -81,9 +81,37 @@ const getAlbumById = async (albumId, userId) => {
     return { errCode: 2, message: "Error fetching album" };
   }
 };
+const removeMediaFromAlbum = async (albumId, mediaId, userId) => {
+  try {
+    const album = await db.Album.findByPk(albumId);
+    if (!album || album.userId !== userId) {
+      return { errCode: 1, message: "Album not found or not authorized" };
+    }
+
+    const media = await db.Media.findByPk(mediaId);
+    if (!media) {
+      return { errCode: 2, message: "Media not found" };
+    }
+
+    const deleted = await db.AlbumMedia.destroy({
+      where: { albumId, mediaId },
+    });
+
+    if (deleted === 0) {
+      return { errCode: 3, message: "Media not found in album" };
+    }
+
+    return { errCode: 0, message: "Media removed from album successfully" };
+  } catch (err) {
+    console.error("Error removing media from album:", err);
+    return { errCode: 4, message: "Error removing media from album" };
+  }
+};
+
 export default {
   createAlbum,
   getAllAlbumsByUser,
   addMediaToAlbum,
   getAlbumById,
+  removeMediaFromAlbum,
 };

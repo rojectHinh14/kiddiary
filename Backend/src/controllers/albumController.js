@@ -75,9 +75,28 @@ const getAlbumById = async (req, res) => {
       .json({ message: "Server error", error: err.message });
   }
 };
+const removeMediaFromAlbum = async (req, res) => {
+  try {
+    const { albumId, mediaId } = req.params;
+    const userId = req.user.id;
+
+    const result = await albumService.removeMediaFromAlbum(
+      albumId,
+      mediaId,
+      userId
+    );
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Error removing media from album:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
+  }
+};
 export default {
   createAlbum,
   getAllAlbumsByUser,
   addMediaToAlbum,
   getAlbumById,
+  removeMediaFromAlbum,
 };

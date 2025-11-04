@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import db from "../models/index.js";
-
+import { Op } from "sequelize";
 const createMedia = async ({ userId, fileBase64, description, date }) => {
   try {
     const base64Data = fileBase64.replace(/^data:.+;base64,/, "");
@@ -57,4 +57,50 @@ const getAllMediaByUser = async (userId) => {
   }
 };
 
-export default { createMedia, getAllMediaByUser };
+const deleteMedia = async (userId, mediaId) => {
+  try {
+    const media = await db.Media.findOne({ where: { id: mediaId, userId } });
+    if (!media) {
+      return { errCode: 1, message: "Media not found or not authorized" };
+    }
+
+    await db.AlbumMedia.destroy({ where: { mediaId } });
+
+    const filePath = path.join(__dirname, "../../", media.fileUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    await db.Media.destroy({ where: { id: mediaId } });
+
+    return {
+      errCode: 0,
+      message: "Delete success (media + album links removed)",
+    };
+  } catch (err) {
+    console.error("Error deleting media:", err);
+    return {
+      errCode: 2,
+      message: "Error while deleting media",
+      error: err.message,
+    };
+  }
+};
+
+const searchByAiTags = async (userId, keyword) => {
+  try {
+    const media = await db.Media.findAll({
+      where: {
+        userId,
+        aiTags: { [Op.like]: `%${keyword}%` }, // MySQL JSON as string
+      },
+      order: [["date", "DESC"]],
+    });
+
+    return { errCode: 0, data: media };
+  } catch (err) {
+    console.error("Error searching media:", err);
+    return { errCode: 1, message: "Error searching media" };
+  }
+};
+export default { createMedia, getAllMediaByUser, deleteMedia, searchByAiTags };
