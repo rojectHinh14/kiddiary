@@ -15,8 +15,9 @@ import {
   saveVaccineStatus,
 } from "../../store/slice/vaccinationSlice";
 import { loadChildren } from "../../store/slice/childrenSlice";
+import { fromApiStatus, getChildVaccineDetail } from "../../services/healthService"; // << thêm import
 
-// ===== helper: status meta (UPPERCASE để khớp AllCode.keyMap) =====
+// UI status meta
 const STATUS_META = {
   NONE:    { label: "Update",       color: "#F871A0", text: "#fff" },
   NOT_YET: { label: "Not injected", color: "#E5E7EB", text: "#111827" },
@@ -24,7 +25,14 @@ const STATUS_META = {
   SKIPPED: { label: "Skipped",      color: "#FCD34D", text: "#78350F" },
 };
 
-function UpdateDialog({ open, onClose, data, onSave }) {
+// Map UI -> API
+const STATUS_TO_API = {
+  NOT_YET: "not_injected",
+  DONE: "injected",
+  SKIPPED: "skipped",
+};
+
+function UpdateDialog({ open, onClose, data, onSave, loading }) {
   const [status, setStatus] = useState(data?.status || "NOT_YET");
   const [date, setDate]     = useState(data?.updateTime?.slice(0, 10) || "");
   const [note, setNote]     = useState(data?.note || "");
@@ -35,7 +43,7 @@ function UpdateDialog({ open, onClose, data, onSave }) {
     setNote(data?.note || "");
   }, [data]);
 
-  if (!data) return null;
+  if (!open) return null;
 
   const statusOptions = [
     { key: "NOT_YET", label: STATUS_META.NOT_YET.label },
@@ -56,48 +64,91 @@ function UpdateDialog({ open, onClose, data, onSave }) {
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2, overflow: "hidden" } }}>
       <Box sx={{ position: "sticky", top: 0, zIndex: 1, bgcolor: "#fff", borderBottom: "1px solid #E5E7EB", px: 3, py: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 800, color: "#111827" }}>
-          Vaccination update — {data.childName} • {data.vaccine?.name}
+          Vaccination update — {data?.childName} • {data?.vaccine?.name || data?.vaccine?.vaccineName || "-"}
         </Typography>
       </Box>
 
-      <DialogContent sx={{ p: 0, maxHeight: "80vh" }}>
-        <Row label="Vaccine"><Typography sx={{ fontWeight: 700 }}>{data.vaccine?.name}</Typography></Row>
-        <Row label="Child"><Typography>{data.childName}</Typography></Row>
+      {loading ? (
+        <Box sx={{ p: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <DialogContent sx={{ p: 0, maxHeight: "80vh" }}>
+          <Row label="Vaccine">
+            <Typography sx={{ fontWeight: 700 }}>
+              {data?.vaccine?.name || data?.vaccine?.vaccineName || "-"}
+            </Typography>
+          </Row>
 
-        <Row label="Status">
-          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            <FormControl size="small" sx={{ minWidth: 220 }}>
-              <InputLabel id="vax-status">Status</InputLabel>
-              <Select labelId="vax-status" label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-                {statusOptions.map((opt) => (
-                  <MenuItem key={opt.key} value={opt.key}>{opt.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <Row label="Child">
+            <Typography>{data?.childName}</Typography>
+          </Row>
 
-            <TextField
-              size="small"
-              type="date"
-              label="Date"
-              InputLabelProps={{ shrink: true }}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </Box>
-        </Row>
+          <Row label="Status">
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <FormControl size="small" sx={{ minWidth: 220 }}>
+                <InputLabel id="vax-status">Status</InputLabel>
+                <Select
+                  labelId="vax-status"
+                  label="Status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  {statusOptions.map((opt) => (
+                    <MenuItem key={opt.key} value={opt.key}>{opt.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-        <Row label="Note">
-          <TextField fullWidth multiline minRows={3} placeholder="Add your note" value={note} onChange={(e) => setNote(e.target.value)} />
-        </Row>
+              <TextField
+                size="small"
+                type="date"
+                label="Date"
+                InputLabelProps={{ shrink: true }}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </Box>
+          </Row>
 
-        <Row label="Description">
-          <Typography sx={{ whiteSpace: "pre-wrap" }}>{data.vaccine?.description || "-"}</Typography>
-        </Row>
-      </DialogContent>
+          <Row label="Note">
+            <TextField fullWidth multiline minRows={3} placeholder="Add your note" value={note} onChange={(e) => setNote(e.target.value)} />
+          </Row>
+
+                <Row label="Description">
+            <Typography sx={{ whiteSpace: "pre-wrap" }}>
+              {data?.vaccine?.description || "-"}
+            </Typography>
+          </Row>
+          <Row label="About">
+            <Typography sx={{ whiteSpace: "pre-wrap" }}>
+              {data?.vaccine?.about || "-"}
+            </Typography>
+          </Row>
+          <Row label="Recommended date">
+            <Typography>{data?.vaccine?.recommendedDate || "-"}</Typography>
+          </Row>
+          <Row label="Required?">
+            <Typography>{data?.vaccine?.required ? "Yes" : "No"}</Typography>
+          </Row>
+
+
+          {data?.vaccine?.symptoms && (
+            <Row label="Symptoms / Side Effects">
+              <Typography sx={{ whiteSpace: "pre-wrap" }}>{data?.vaccine?.symptoms}</Typography>
+            </Row>
+          )}
+        </DialogContent>
+      )}
 
       <DialogActions sx={{ px: 2.5, py: 1.75, borderTop: "1px solid #E5E7EB" }}>
         <Button onClick={onClose} variant="text" sx={{ fontWeight: 700, color: "#374151" }}>CANCEL</Button>
-        <Button onClick={() => onSave({ status, date, note })} variant="contained" sx={{ bgcolor: "#22C55E", fontWeight: 800, px: 3, "&:hover": { bgcolor: "#16A34A" } }}>
+        <Button
+          onClick={() => onSave({ status, date, note })}
+          variant="contained"
+          sx={{ bgcolor: "#22C55E", fontWeight: 800, px: 3, "&:hover": { bgcolor: "#16A34A" } }}
+          disabled={loading}
+        >
           SAVE
         </Button>
       </DialogActions>
@@ -115,6 +166,7 @@ export default function VaccinationSchedulePage() {
   const loading = useSelector((s) => s.vaccination?.loading || s.children?.loading);
 
   const [selected, setSelected] = useState(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
 
   // Load children nếu state đang trống
   useEffect(() => {
@@ -133,37 +185,64 @@ export default function VaccinationSchedulePage() {
     }
   }, [children, childIdParam, dispatch]);
 
-  const openUpdate = (child, row) => {
+const openUpdate = async (child, row) => {
+  setDialogLoading(true);
+  try {
+    let vid = row?.vaccine?.id;
+    if (Array.isArray(vid)) vid = vid[0];
+    const cid = Number(child?.id);
+    vid = Number(vid);
+    if (!cid || !vid) return;
+
+    const detail = await getChildVaccineDetail(cid, vid);
+    const v = detail?.Vaccine || {};
+
     setSelected({
-      childId: child.id,
+      childId: cid,
       childName: `${child.firstName || ""} ${child.lastName || ""}`.trim() || "Child",
-      vaccineId: row.vaccine?.id,
-      vaccine: row.vaccine,
-      status: row.status || "NOT_YET",
-      updateTime: row.updateTime,
-      note: row.note,
+      vaccineId: vid,
+
+      // Dùng mapper để ra UI status
+      status: fromApiStatus(detail?.status ?? row?.status),
+      updateTime: detail?.updateTime || row?.updateTime || null,
+      note: detail?.note ?? row?.note ?? "",
+
+      vaccine: {
+        id: Number(v?.id),
+        name: v?.vaccineName || row?.vaccine?.name || "",
+        diseaseName: v?.diseaseName || row?.vaccine?.diseaseName || "",
+        description: v?.description ?? row?.vaccine?.description ?? "",
+        about: v?.about ?? "",
+        required: Boolean(v?.required),
+        recommendedDate: v?.recommendedDate ?? "",
+        symptoms: v?.symptoms ?? "",
+      },
     });
-  };
+  } catch (e) {
+    console.error("openUpdate error", e);
+  } finally {
+    setDialogLoading(false);
+  }
+};
+
 
   const handleSave = ({ status, date, note }) => {
     if (!selected) return;
+const apiStatus = STATUS_TO_API[status] || "not_injected";
     dispatch(
       saveVaccineStatus({
         childId: selected.childId,
         vaccineId: selected.vaccineId,
-        payload: { status, updateTime: date || null, note },
+        payload: { status: apiStatus, updateTime: date || null, note },
       })
     );
     setSelected(null);
   };
 
-  // Tên tiêu đề tuỳ theo ngữ cảnh
-  const title =
-    childIdParam
-      ? `Vaccination schedule — Child #${childIdParam}`
-      : "Vaccination schedule (All children)";
+  const title = childIdParam
+    ? `Vaccination schedule — Child #${childIdParam}`
+    : "Vaccination schedule (All children)";
 
-  // Nếu có childIdParam thì chỉ render đúng bé đó
   const childrenToRender = childIdParam
     ? children.filter((c) => String(c.id) === String(childIdParam))
     : children;
@@ -243,13 +322,13 @@ export default function VaccinationSchedulePage() {
                 <div className="p-4 text-center text-slate-500">No vaccines found</div>
               ) : (
                 rows.map((r, idx) => {
-                  const meta = STATUS_META[r.status || "NONE"];
+
+                  const uiStatus = STATUS_META[r.status] ? r.status : fromApiStatus(r.status);
+                  const meta = STATUS_META[uiStatus] || STATUS_META.NONE; 
                   return (
                     <div
                       key={`${child.id}-${r.vaccine?.id}-${idx}`}
-                      className={`grid grid-cols-3 text-sm ${
-                        idx % 2 === 0 ? "bg-[#F0F9FF]" : "bg-white"
-                      } border-t border-[#E5E7EB]`}
+                      className={`grid grid-cols-3 text-sm ${idx % 2 === 0 ? "bg-[#F0F9FF]" : "bg-white"} border-t border-[#E5E7EB]`}
                     >
                       <div className="p-4 text-center font-medium text-slate-700 border-r border-[#E5E7EB]">
                         {r.vaccine?.name}
@@ -265,8 +344,8 @@ export default function VaccinationSchedulePage() {
                           variant="contained"
                           onClick={() => openUpdate(child, r)}
                           sx={{
-                            bgcolor: meta.color,
-                            color: meta.text,
+                            bgcolor: meta.color || "#E5E7EB",
+                            color:   meta.text  || "#111827",
                             textTransform: "none",
                             fontWeight: 700,
                             "&:hover": { filter: "brightness(0.95)" },
@@ -291,7 +370,8 @@ export default function VaccinationSchedulePage() {
 
       {/* Update dialog */}
       <UpdateDialog
-        open={!!selected}
+        open={!!selected || dialogLoading}
+        loading={dialogLoading}
         onClose={() => setSelected(null)}
         data={selected}
         onSave={handleSave}

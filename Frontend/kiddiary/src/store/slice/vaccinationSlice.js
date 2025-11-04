@@ -3,6 +3,7 @@ import {
     getVaccinesByChild ,
     updateChildVaccineStatus,
     normalizeChildVaccines,
+    fromApiStatus,
 } from "../../services/healthService";
 import { createSlice } from "@reduxjs/toolkit";
 
@@ -25,16 +26,19 @@ export const loadVaccinesForAllChildren = createAsyncThunk(
 );
 
 export const saveVaccineStatus = createAsyncThunk(
-  "vaccination/saveStatus",
-  async ({ childId, vaccineId, payload }, { rejectWithValue }) => {
-    try {
-      await updateChildVaccineStatus({ childId, vaccineId, ...payload });
-      return { childId, vaccineId, payload };
-    } catch (e) {
-      return rejectWithValue(e.message);
-    }
+  'vaccination/saveStatus',
+  async ({ childId, vaccineId, payload }) => {
+    const data = await updateChildVaccineStatus({
+      childId,
+      vaccineId,
+      status: payload.status,     
+      updateTime: payload.updateTime,
+      note: payload.note,
+    });
+    return data; 
   }
 );
+
 
 const vaccinationSlice = createSlice({
   name: "vaccination",
@@ -58,16 +62,15 @@ const vaccinationSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "Failed to load vaccines";
       })
-      .addCase(saveVaccineStatus.fulfilled, (state, action) => {
-        const { childId, vaccineId, payload } = action.payload;
-        const list = state.vaccinesByChildId[childId] || [];
-        const item = list.find((x) => String(x.vaccine?.id) === String(vaccineId));
-        if (item) {
-          item.status = payload.status?.toUpperCase?.() || item.status;
-          item.updateTime = payload.updateTime || item.updateTime;
-          item.note = payload.note ?? item.note;
-        }
-      });
+       .addCase(saveVaccineStatus.fulfilled, (state, action) => {
+        const { childId, vaccineId, status, updateTime, note } = action.payload || {};
+        const rows = state.vaccinesByChildId?.[childId] || [];
+        const row = rows.find(r => Number(r?.vaccine?.id) === Number(vaccineId));
+        if (row) {
+          row.status = fromApiStatus(status); 
+          row.updateTime = updateTime || null;
+          row.note = note || '';
+        }});
   },
 });
 
