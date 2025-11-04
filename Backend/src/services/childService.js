@@ -94,6 +94,73 @@ const getChildrenByUser = async (userId) => {
   }
 };
 
+const updateChild = async (userId, childId, data) => {
+  try {
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+    if (!child) {
+      return { errCode: 1, errMessage: "Child not found or not owned by user" };
+    }
+
+    let avatarUrl = child.avatarUrl;
+
+    if (data.avatarBase64 && data.avatarBase64.startsWith("data:image")) {
+      const base64Data = data.avatarBase64.replace(/^data:.+;base64,/, "");
+      const uploadDir = path.join(__dirname, "../../uploads");
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const fileName = `child_${Date.now()}_${userId}.jpg`;
+      const filePath = path.join(uploadDir, fileName);
+
+      fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
+      avatarUrl = `/uploads/${fileName}`;
+    }
+
+    await child.update({
+      firstName: data.firstName ?? child.firstName,
+      lastName: data.lastName ?? child.lastName,
+      dob: data.dob ?? child.dob,
+      weight: data.weight ?? child.weight,
+      height: data.height ?? child.height,
+      genderCode: data.genderCode ?? child.genderCode,
+      avatarUrl,
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Child updated successfully",
+      data: child,
+    };
+  } catch (error) {
+    console.error("Error in updateChild:", error);
+    return { errCode: 2, errMessage: "Error updating child" };
+  }
+};
+
+const deleteChild = async (userId, childId) => {
+  try {
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+    if (!child) {
+      return { errCode: 1, errMessage: "Child not found or not owned by user" };
+    }
+
+    await db.ChildVaccine.destroy({ where: { childId } });
+
+    await db.ChildProfile.destroy({ where: { id: childId } });
+
+    return { errCode: 0, errMessage: "Child deleted successfully" };
+  } catch (error) {
+    console.error("Error in deleteChild:", error);
+    return { errCode: 2, errMessage: "Error deleting child" };
+  }
+};
+
 const getVaccinesByChild = async (childId) => {
   try {
     const vaccines = await db.ChildVaccine.findAll({
@@ -248,6 +315,8 @@ const updateChildVaccineStatus = async (data) => {
 export default {
   addChild,
   getChildrenByUser,
+  updateChild,
+  deleteChild,
   getVaccinesByChild,
   getChildVaccineDetail,
   updateChildVaccineStatus,

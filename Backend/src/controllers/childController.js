@@ -26,7 +26,7 @@ const addChild = async (req, res) => {
       height,
       genderCode,
       avatarBase64,
-    } = req.body; 
+    } = req.body;
 
     if (!firstName || !lastName || !dob) {
       return res.status(400).json({
@@ -49,6 +49,38 @@ const addChild = async (req, res) => {
     return res.status(200).json(result);
   } catch (error) {
     console.error("Error in addChild:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+const updateChild = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const childId = req.params.id;
+    const updateData = req.body;
+
+    const result = await childService.updateChild(userId, childId, updateData);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in updateChild:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+
+const deleteChild = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const childId = req.params.id;
+
+    const result = await childService.deleteChild(userId, childId);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in deleteChild:", error);
     return res.status(500).json({
       errCode: -1,
       errMessage: "Server error",
@@ -132,6 +164,8 @@ const updateChildVaccineStatus = async (req, res) => {
 export default {
   getChildrenByUser,
   addChild,
+  updateChild,
+  deleteChild,
   getVaccinesByChild,
   getChildVaccineDetail,
   updateChildVaccineStatus,
