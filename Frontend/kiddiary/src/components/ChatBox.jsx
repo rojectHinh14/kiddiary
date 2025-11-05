@@ -16,6 +16,45 @@ export default function ChatBox({
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
+  // Load lịch sử chat khi mở chatbox lần đầu
+  useEffect(() => {
+    if (isChatOpen && !historyLoaded) {
+      loadChatHistory();
+    }
+  }, [isChatOpen]);
+
+  const loadChatHistory = async () => {
+    try {
+      const res = await axios.get("http://localhost:8080/api/gemini/history", {
+        withCredentials: true,
+      });
+
+      if (res.data.success && res.data.history.length > 0) {
+        // Convert history to messages format
+        const historyMessages = [];
+        res.data.history.forEach((log) => {
+          historyMessages.push({ role: "user", text: log.question });
+          historyMessages.push({ role: "bot", text: log.answer });
+        });
+
+        // Prepend history trước greeting message
+        setMessages([
+          ...historyMessages,
+          {
+            role: "bot",
+            text: "Xin chào, mình có thể giúp gì cho bạn?",
+          },
+        ]);
+      }
+      
+      setHistoryLoaded(true);
+    } catch (err) {
+      console.error("Failed to load chat history:", err);
+      setHistoryLoaded(true); // Đánh dấu đã thử load
+    }
+  };
 
   const handleToggle = () => {
     if (isChatOpen) {
@@ -39,29 +78,47 @@ export default function ChatBox({
     setLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:8080/api/gemini/chat", {
-        prompt: input,
-      });
+      const res = await axios.post(
+        "http://localhost:8080/api/gemini/chat",
+        { prompt: input },
+        {
+          withCredentials: true, // ← FIX: Gửi cookie kèm theo
+        }
+      );
 
       const botReply =
         res.data.reply || "Xin lỗi, mình không nhận được phản hồi.";
-      setMessages((prev) => [...prev, { role: "bot", text: botReply }]);
-    } catch (err) {
-      console.error(err);
+      
+      // Nếu có kết quả từ database, hiển thị thêm
+      const dbResults = res.data.dbResults;
+      const totalResults = res.data.totalResults || 0;
+
       setMessages((prev) => [
         ...prev,
-        { role: "bot", text: "Lỗi khi kết nối tới server." },
+        {
+          role: "bot",
+          text: botReply,
+          results: dbResults, // Lưu kết quả để render sau
+          total: totalResults,
+        },
       ]);
+    } catch (err) {
+      console.error(err);
+      const errorMsg =
+        err.response?.status === 401
+          ? "Bạn cần đăng nhập để sử dụng chatbot."
+          : "Lỗi khi kết nối tới server.";
+      setMessages((prev) => [...prev, { role: "bot", text: errorMsg }]);
     } finally {
       setLoading(false);
     }
   };
+
   const messagesEndRef = useRef(null);
 
-useEffect(() => {
-  // scroll
-  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-}, [messages]);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -120,8 +177,40 @@ useEffect(() => {
                     aria-hidden="true"
                     draggable={false}
                   />
-                  <div className="bg-gray-100 rounded-xl px-3 py-2">
+                  <div className="bg-gray-100 rounded-xl px-3 py-2 max-w-[90%]">
                     <span className="font-semibold">Bot:</span> {msg.text}
+                    
+                    {/* Hiển thị kết quả nếu có */}
+                    {msg.total > 0 && msg.results && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        <div className="font-semibold mb-1">
+                          Tìm thấy {msg.total} kết quả:
+                        </div>
+                        {msg.results.data?.slice(0, 5).map((item, i) => (
+                          <div key={i} className="mb-1">
+                            {item.fileUrl ? (
+                              <a
+                                href={item.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#41B3A2] hover:underline"
+                              >
+                                📷 {item.description || "Ảnh"} ({item.date})
+                              </a>
+                            ) : (
+                              <span>
+                                📁 {item.albumName} ({item.Media?.length || 0} ảnh)
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        {msg.total > 5 && (
+                          <div className="text-gray-400 italic">
+                            ... và {msg.total - 5} kết quả khác
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
