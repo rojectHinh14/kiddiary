@@ -3,6 +3,7 @@ import ChildForm from "./ChildForm";
 import { getChildrenService } from "../../services/childService";
 import ChildCard from "./ChildCard";
 import ChildViewDialog from "./ChildViewDialog";
+import ChatBox from "../../components/ChatBox";
 
 export default function ChildrenPanel() {
   const [rows, setRows] = useState([]);
@@ -130,6 +131,7 @@ export default function ChildrenPanel() {
       {openForm && <ChildForm onCancel={() => setOpenForm(false)} onSave={handleAddChild} />}
 
       {viewing && <ChildViewDialog child={viewing} onClose={() => setViewing(null)} />}
+        <ChatBox/>
     </div>
   );
 }

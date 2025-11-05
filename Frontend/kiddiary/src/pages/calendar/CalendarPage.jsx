@@ -23,6 +23,7 @@ import {
   getAllMediaByUserService,
   uploadMediaService,
 } from "../../services/mediaService";
+import ChatBox from "../../components/ChatBox";
 
 export default function CalendarPage() {
   const [current, setCurrent] = useState(new Date());
@@ -168,6 +169,7 @@ export default function CalendarPage() {
         onSubmit={handleCreate}
         defaultDate={selectedDate || new Date()}
       />
+      <ChatBox/>
     </div>
   );
 }

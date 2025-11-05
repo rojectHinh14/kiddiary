@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 export default function MomentCard({
@@ -13,27 +14,6 @@ export default function MomentCard({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const menuRef = useRef(null);
-  const btnRef = useRef(null);
-
-  // click ra ngoài / ESC -> đóng
-  useEffect(() => {
-    const onDown = (e) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-    const onClick = (e) => {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target) && !btnRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("keydown", onDown);
-    document.addEventListener("mousedown", onClick);
-    return () => {
-      document.removeEventListener("keydown", onDown);
-      document.removeEventListener("mousedown", onClick);
-    };
-  }, []);
 
   return (
     <section className="bg-white rounded-[20px] shadow-[0_6px_28px_rgba(0,0,0,0.06)] p-6 md:p-8">
@@ -41,14 +21,11 @@ export default function MomentCard({
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
-            src={
-              avatar ||
-              "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200"
-            }
+            src={avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200"}
             alt="avatar"
             className="h-10 w-10 rounded-full object-cover"
           />
-        <div className="leading-tight">
+          <div className="leading-tight">
             <div className="text-[15px] font-semibold text-gray-900">{username}</div>
             <div className="text-[12px] text-black/50 -mt-0.5">{date}</div>
           </div>
@@ -56,27 +33,34 @@ export default function MomentCard({
 
         <div className="relative">
           <button
-            ref={btnRef}
             type="button"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={() => {
+              console.log("[MomentCard] toggle menu", { id });
+              setMenuOpen((v) => !v);
+            }}
             className="h-9 w-9 inline-flex items-center justify-center rounded-full hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-teal-300/60"
           >
             <MoreHorizontal size={18} />
           </button>
 
+          {/* Backdrop để đóng menu khi click ra ngoài (không cần document listeners) */}
+          {menuOpen && (
+            <div className="fixed inset-0 z-[40]" onClick={() => setMenuOpen(false)} />
+          )}
+
           {/* Popover menu */}
           {menuOpen && (
             <div
-              ref={menuRef}
               role="menu"
-              className="absolute right-0 mt-2 w-44 origin-top-right rounded-2xl border border-black/10 bg-white/95 backdrop-blur shadow-[0_12px_40px_rgba(0,0,0,0.12)] animate-in fade-in zoom-in-95"
-              style={{ zIndex: 40 }}
+              className="absolute right-0 mt-2 w-44 origin-top-right rounded-2xl border border-black/10 bg-white/95 backdrop-blur shadow-[0_12px_40px_rgba(0,0,0,0.12)] z-[41]"
+              onClick={(e) => e.stopPropagation()} // chặn “đóng menu” của backdrop
             >
               <button
                 role="menuitem"
                 onClick={() => {
+                  console.log("[MomentCard] click Edit", { id });
                   setMenuOpen(false);
                   onEdit(id);
                 }}
@@ -93,8 +77,9 @@ export default function MomentCard({
               <button
                 role="menuitem"
                 onClick={() => {
+                  console.log("[MomentCard] click Delete menuitem", { id });
                   setMenuOpen(false);
-                  setConfirmOpen(true);
+                  setConfirmOpen(true); // mở confirm ngay, không defer
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2.5 rounded-b-2xl hover:bg-red-50 text-[14px] text-red-600"
               >
@@ -111,68 +96,51 @@ export default function MomentCard({
       {/* Caption */}
       {caption && <p className="text-[15px] text-gray-900 mt-4">{caption}</p>}
 
-      {/* Single image */}
+      {/* Image */}
       {image && (
         <figure className="mt-4 overflow-hidden rounded-2xl border border-black/5 bg-gray-50">
           <div className="w-full max-h-[60vh] grid place-items-center">
-            <img
-              src={image}
-              alt="moment"
-              loading="lazy"
-              className="w-full h-auto max-h-[520px] object-contain"
-            />
+            <img src={image} alt="moment" loading="lazy" className="w-full h-auto max-h-[520px] object-contain" />
           </div>
         </figure>
       )}
 
-      {/* Confirm Delete Dialog */}
-      {confirmOpen && (
-        <ConfirmDialog
-          title="Delete this post?"
-          desc="This action cannot be undone."
-          onCancel={() => setConfirmOpen(false)}
-          onConfirm={() => {
-            setConfirmOpen(false);
-            onDelete(id);
-          }}
-        />
-      )}
+      {/* Confirm Delete (PORTAL + z-index cao) */}
+      {confirmOpen &&
+        createPortal(
+          <ConfirmDialog
+            title="Delete this post?"
+            desc="This action cannot be undone."
+            onCancel={() => {
+              console.log("[MomentCard] cancel confirm", { id });
+              setConfirmOpen(false);
+            }}
+            onConfirm={() => {
+              console.log("[MomentCard] confirm delete", { id });
+              setConfirmOpen(false);
+              onDelete(id);
+            }}
+          />,
+          document.body
+        )}
     </section>
   );
 }
 
-/* ---------- Mini components ---------- */
 function ConfirmDialog({ title, desc, onCancel, onConfirm }) {
   useLockBodyScroll(true);
-
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center"
-      role="dialog"
-      aria-modal
-      onClick={onCancel}
-    >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center" role="dialog" aria-modal>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
       <div
         className="relative w-[min(420px,92vw)] rounded-2xl bg-white p-5 shadow-xl border border-black/10"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-lg font-semibold">{title}</div>
         <div className="mt-1 text-sm text-gray-600">{desc}</div>
-
         <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="h-9 px-4 rounded-lg border hover:bg-black/5"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="h-9 px-4 rounded-lg bg-red-600 text-white hover:bg-red-700"
-          >
-            Delete
-          </button>
+          <button onClick={onCancel} className="h-9 px-4 rounded-lg border hover:bg-black/5">Cancel</button>
+          <button onClick={onConfirm} className="h-9 px-4 rounded-lg bg-red-600 text-white hover:bg-red-700">Delete</button>
         </div>
       </div>
     </div>
@@ -180,10 +148,10 @@ function ConfirmDialog({ title, desc, onCancel, onConfirm }) {
 }
 
 function useLockBodyScroll(lock) {
-  useEffect(() => {
+  React.useEffect(() => {
     if (!lock) return;
-    const original = document.body.style.overflow;
+    const orig = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = original; };
+    return () => (document.body.style.overflow = orig);
   }, [lock]);
 }

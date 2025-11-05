@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import MomentCard from "../../components/home/MomentCard";
 import HeaderHome from "../../components/home/HeaderHome";
 import { PenSquare } from "lucide-react";
@@ -8,6 +8,7 @@ import CalendarPage from "../calendar/CalendarPage";
 import {
   uploadMediaService,
   getAllMediaByUserService,
+  deleteMedia,
 } from "../../services/mediaService";
 import { format } from "date-fns";
 import AlbumPanel from "../Album/AlbumPanel";
@@ -29,46 +30,39 @@ export default function Home() {
       setLoading(true);
       const response = await getAllMediaByUserService();
       if (response.data && response.data.errCode === 0) {
-        // Sort trước khi map: dùng media.date gốc (ISO string, dễ parse)
-        const sortedData = response.data.data.sort(
+        const sorted = response.data.data.sort(
           (a, b) => new Date(b.date) - new Date(a.date)
         );
-
-        const mappedPosts = sortedData.map((media) => {
-          const fullName =
-            `${media.User.firstName} ${media.User.lastName}`.trim();
+        const mapped = sorted.map((m) => {
+          const fullName = `${m.User?.firstName || ""} ${m.User?.lastName || ""}`.trim();
           return {
-            id: media.id.toString(),
-            username: fullName || "Unknown User", 
-            date: format(new Date(media.date), "dd MMM yyyy"),
-            caption: media.description || "(No caption)",
-            images: [`${import.meta.env.VITE_BACKEND_URL}${media.fileUrl}`],
-            avatar: media.User?.image
-              ? media.User.image.startsWith("http")
-                ? media.User.image
-                : `${import.meta.env.VITE_BACKEND_URL}${media.User.image}`
+            id: m.id, // giữ kiểu number
+            username: fullName || "Unknown User",
+            date: format(new Date(m.date), "dd MMM yyyy"),
+            caption: m.description || "(No caption)",
+            image: `${import.meta.env.VITE_BACKEND_URL}${m.fileUrl}`, // <-- 'image' (khớp MomentCard)
+            avatar: m.User?.image
+              ? (m.User.image.startsWith("http")
+                  ? m.User.image
+                  : `${import.meta.env.VITE_BACKEND_URL}${m.User.image}`)
               : "https://i.pravatar.cc/120?img=12",
-            // Fix: dùng User.image nếu có
-            people: media.aiTags || "", // Optional: nếu aiTags dùng cho people
+            people: m.aiTags || "",
           };
         });
-        setPosts(mappedPosts);
+        setPosts(mapped);
       } else {
-        console.warn("API response error:", response.data?.errCode);
-        setPosts([]); // Fallback empty nếu lỗi
+        setPosts([]);
       }
     } catch (error) {
       console.error("Error fetching posts:", error);
-      setPosts([]); // Fallback
+      setPosts([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (tab === "moment") {
-      fetchPosts();
-    }
+    if (tab === "moment") fetchPosts();
   }, [tab, fetchPosts]);
 
   const handleCreate = useCallback(
@@ -80,50 +74,63 @@ export default function Home() {
         formData.append("file", file);
         formData.append("description", caption);
         formData.append("date", format(inputDate || new Date(), "yyyy-MM-dd"));
-        if (people) formData.append("people", people); // Optional nếu backend cần
+        if (people) formData.append("people", people);
 
         const response = await uploadMediaService(formData);
         if (response.data && response.data.errCode === 0) {
-          const newMedia = response.data.data; // Giả sử backend trả về object mới giống GET
-          if (newMedia) {
-            const fullName = `${newMedia.User?.firstName || ""} ${
-              newMedia.User?.lastName || ""
-            }`.trim();
+          const m = response.data.data;
+          if (m) {
+            const fullName = `${m.User?.firstName || ""} ${m.User?.lastName || ""}`.trim();
             const newPost = {
-              id: newMedia.id.toString(),
+              id: m.id,
               username: fullName || "Unknown User",
-              date: format(new Date(newMedia.date), "dd MMM yyyy"),
-              caption: newMedia.description || "(No caption)",
-              images: [
-                `${import.meta.env.VITE_BACKEND_URL}${newMedia.fileUrl}`,
-              ],
-              avatar: newMedia.User?.image
-                ? newMedia.User.image.startsWith("http")
-                  ? newMedia.User.image
-                  : `${import.meta.env.VITE_BACKEND_URL}${newMedia.User.image}`
+              date: format(new Date(m.date), "dd MMM yyyy"),
+              caption: m.description || "(No caption)",
+              image: `${import.meta.env.VITE_BACKEND_URL}${m.fileUrl}`, // <-- 'image'
+              avatar: m.User?.image
+                ? (m.User.image.startsWith("http")
+                    ? m.User.image
+                    : `${import.meta.env.VITE_BACKEND_URL}${m.User.image}`)
                 : "https://i.pravatar.cc/120?img=12",
-
-              people: newMedia.aiTags || "",
+              people: m.aiTags || "",
             };
-            setPosts((prev) => [newPost, ...prev]); // Append to top (newest)
+            setPosts((prev) => [newPost, ...prev]);
           } else {
-            // Fallback refetch nếu backend không trả data mới
             await fetchPosts();
           }
           setOpenDialog(false);
         } else {
-          alert(
-            "Upload failed: " + (response.data?.message || "Unknown error")
-          );
+          alert("Upload failed: " + (response.data?.message || "Unknown error"));
         }
       } catch (error) {
         console.error("Error creating post:", error);
-        alert(
-          "Upload error: " + (error.response?.data?.message || error.message)
-        );
+        alert("Upload error: " + (error.response?.data?.message || error.message));
       }
     },
     [fetchPosts]
+  );
+
+  const handleDelete = useCallback(
+     console.log("[Home] handleDelete CALLED with id =", id);
+    async (id) => {
+      const prevPosts = posts;
+      setPosts((list) => list.filter((x) => String(x.id) !== String(id)));
+
+      try {
+        const res = await deleteMedia(id);
+        const data = res?.data ?? res; 
+        console.log("[Home] delete response =", data);
+
+        if (data?.errCode !== 0) throw new Error(data?.message || "Delete failed");
+       
+      } catch (e) {
+        console.error(e);
+        // revert
+        setPosts(prevPosts);
+        // hoặc: await fetchPosts();
+      }
+    },
+    [posts]
   );
 
   return (
@@ -135,15 +142,15 @@ export default function Home() {
           window.location.href = "/login";
         }}
       />
+
       <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
         <aside className="w-56 shrink-0 bg-[#FFF6EA] p-6 overflow-y-auto">
           <nav className="flex flex-col gap-3">
             <button
               onClick={() => setTab("moment")}
               className={`px-4 py-2 text-sm rounded-full ${
-                tab === "moment"
-                  ? "bg-[#2CC1AE] text-white font-medium"
-                  : "hover:bg-black/5"
+                tab === "moment" ? "bg-[#2CC1AE] text-white font-medium" : "hover:bg-black/5"
               }`}
             >
               Moment
@@ -151,9 +158,7 @@ export default function Home() {
             <button
               onClick={() => setTab("calendar")}
               className={`px-4 py-2 text-sm rounded-full ${
-                tab === "calendar"
-                  ? "bg-[#2CC1AE] text-white font-medium"
-                  : "hover:bg-black/5"
+                tab === "calendar" ? "bg-[#2CC1AE] text-white font-medium" : "hover:bg-black/5"
               }`}
             >
               Calendar
@@ -161,9 +166,7 @@ export default function Home() {
             <button
               onClick={() => setTab("album")}
               className={`px-4 py-2 text-sm rounded-full ${
-                tab === "album"
-                  ? "bg-[#2CC1AE] text-white font-medium"
-                  : "hover:bg-black/5"
+                tab === "album" ? "bg-[#2CC1AE] text-white font-medium" : "hover:bg-black/5"
               }`}
             >
               Album
@@ -186,14 +189,13 @@ export default function Home() {
             </button>
           </nav>
         </aside>
+
         {/* Main */}
         <main className="flex-1">
           {tab === "moment" && (
             <div className="flex-1 overflow-y-auto p-4">
               {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  Loading posts...
-                </div>
+                <div className="flex items-center justify-center h-64">Loading posts...</div>
               ) : (
                 <>
                   <button
@@ -204,15 +206,22 @@ export default function Home() {
                     <PenSquare size={16} />
                     New post
                   </button>
+
                   <div className="max-w-[1040px] mx-auto mt-6 space-y-6">
                     {posts.map((p) => (
-                      <MomentCard key={p.id} {...p} />
+                      <MomentCard
+                        key={p.id}
+                        {...p}
+                        onDelete={handleDelete}
+                        onEdit={(id) => console.log("edit", id)}
+                      />
                     ))}
                   </div>
                 </>
               )}
             </div>
           )}
+
           {tab === "calendar" && <CalendarPage />}
           {tab === "album" && <AlbumPanel />}
           {tab === "health" && (
@@ -225,13 +234,9 @@ export default function Home() {
                   />
                 )}
                 {healthView === "vaccination" && (
-                  <VaccinationSchedulePage
-                    onBack={() => setHealthView("overview")}
-                  />
+                  <VaccinationSchedulePage onBack={() => setHealthView("overview")} />
                 )}
-                {healthView === "sleep" && (
-                  <SleepTrackerPage onBack={() => setHealthView("overview")} />
-                )}
+                {healthView === "sleep" && <SleepTrackerPage onBack={() => setHealthView("overview")} />}
               </div>
             </div>
           )}
@@ -239,11 +244,8 @@ export default function Home() {
           {tab === "profile" && <Profile />}
         </main>
       </div>
-      <NewPostDialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        onSubmit={handleCreate}
-      />
+
+      <NewPostDialog open={openDialog} onClose={() => setOpenDialog(false)} onSubmit={handleCreate} />
       <ChatBox />
     </div>
   );
