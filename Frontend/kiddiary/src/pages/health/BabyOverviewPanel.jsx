@@ -25,6 +25,7 @@ import BabyChangingStationRoundedIcon from "@mui/icons-material/BabyChangingStat
 import ScaleRoundedIcon from "@mui/icons-material/ScaleRounded";
 import { getChildrenService } from "../../services/childService";
 import { useNavigate } from "react-router-dom";
+import ChatBox from "../../components/ChatBox";
 
 // ---------- helpers ----------
 const Stat = ({ label, value, unit }) => (
@@ -375,6 +376,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           bg="#CFEBD7"
         />
       </div>
+      <ChatBox/>
     </div>
   );
 }

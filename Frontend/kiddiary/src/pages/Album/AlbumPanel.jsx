@@ -4,6 +4,7 @@ import NewAlbumDialog from "./NewAlbumDialog";
 import AlbumGrid from "./AlbumGrid";
 import AlbumCreateWizard from "./AlbumCreateWizard";
 import { getAllAlbumsByUserService } from "../../services/albumService";
+import ChatBox from "../../components/ChatBox";
 
 export default function AlbumPanel() {
   const [openNewDialog, setOpenNewDialog] = useState(false); // ← Đổi tên cho rõ (chỉ cho NewAlbumDialog)
@@ -106,6 +107,7 @@ export default function AlbumPanel() {
           albumId={wizardConfig.albumId} // ← Đổi: Từ config, luôn đúng
         />
       )}
+      <ChatBox/>
     </div>
   );
 }
