@@ -20,6 +20,8 @@ let initWebRoutes = (app) => {
   //media
   router.post("/api/media/upload", verifyToken, mediaController.uploadMedia);
   router.get("/api/media", verifyToken, mediaController.getAllMediaByUser);
+  router.delete("/api/media/:id", verifyToken, mediaController.deleteMedia);
+  router.get("/api/media/search", verifyToken, mediaController.searchByAiTags);
   //album
   router.post("/api/albums", verifyToken, albumController.createAlbum);
   router.get("/api/albums", verifyToken, albumController.getAllAlbumsByUser);
@@ -31,10 +33,33 @@ let initWebRoutes = (app) => {
   );
   //view album
   router.get("/api/albums/:albumId", verifyToken, albumController.getAlbumById);
+  router.delete(
+    "/api/albums/:albumId/media/:mediaId",
+    verifyToken,
+    albumController.removeMediaFromAlbum
+  );
 
   //child
   router.post("/api/children", verifyToken, childController.addChild);
   router.get("/api/children", verifyToken, childController.getChildrenByUser);
+  router.put("/api/children/:id", verifyToken, childController.updateChild);
+  router.delete("/api/children/:id", verifyToken, childController.deleteChild);
+  router.get(
+    "/api/children/:childId/vaccines",
+    verifyToken,
+    childController.getVaccinesByChild
+  );
+  router.get(
+    "/api/children/:childId/vaccines/:vaccineId",
+    verifyToken,
+    childController.getChildVaccineDetail
+  );
+  router.put(
+    "/api/children/:childId/vaccines/:vaccineId",
+    verifyToken,
+    childController.updateChildVaccineStatus
+  );
+
   return app.use("/", router);
 };
 

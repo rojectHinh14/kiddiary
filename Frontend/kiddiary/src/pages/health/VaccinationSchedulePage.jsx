@@ -1,181 +1,92 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Card,
-  CardContent,
-  IconButton,
-  Typography,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
+  Card, CardContent, IconButton, Typography, Button, Dialog,
+  DialogContent, DialogActions, TextField, Chip, MenuItem, Select,
+  InputLabel, FormControl, Box, CircularProgress,
 } from "@mui/material";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import VaccinesRoundedIcon from "@mui/icons-material/VaccinesRounded";
-import BabyChangingStationRoundedIcon from "@mui/icons-material/BabyChangingStationRounded";
+import CircleIcon from "@mui/icons-material/Circle";
+import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 
-// --- demo data for table ---
-const rows = [
-  {
-    age: "Newborn (0 month)",
-    items: [
-      "Hepatitis B (1st dose, within 24 hrs)",
-      "BCG (Tuberculosis, as soon as possible)",
-    ],
-    doses: 2,
-    primaryVaccine: "Hepatitis B",
-    time: "0 - 24h after giving birth",
-  },
-  {
-    age: "2 months",
-    items: [
-      "6-in-1 (1st dose, 8 weeks old)",
-      "Pneumococcal (1st dose, 8–10 weeks)",
-      "Rotavirus (1st dose, before 12 weeks)",
-    ],
-    doses: 3,
-    primaryVaccine: "6-in-1",
-    time: "at 8 weeks old",
-  },
-  {
-    age: "3 months",
-    items: ["6-in-1 (2nd dose)", "Pneumococcal (2nd dose)", "Rotavirus (2nd dose)"],
-    doses: 3,
-    primaryVaccine: "6-in-1",
-    time: "1 month after dose one",
-  },
-  {
-    age: "4 months",
-    items: [
-      "6-in-1 (3rd dose)",
-      "Rotavirus (3rd dose, if 3-dose type)",
-      "Pneumococcal (3rd dose)",
-    ],
-    doses: 3,
-    primaryVaccine: "6-in-1",
-    time: "1 month after previous dose",
-  },
-  {
-    age: "6 months",
-    items: [
-      "Influenza (1st dose, before flu season)",
-      "Hepatitis B (3rd dose, if not completed)",
-    ],
-    doses: 2,
-    primaryVaccine: "Influenza",
-    time: "6 months old",
-  },
-  { age: "9 months", items: ["Measles (1st dose)"], doses: 1, primaryVaccine: "Measles", time: "9 months" },
-  {
-    age: "12 months (1 year)",
-    items: [
-      "Japanese Encephalitis (1st dose)",
-      "Chickenpox (1st dose)",
-      "Pneumococcal booster",
-    ],
-    doses: 3,
-    primaryVaccine: "Japanese Encephalitis",
-    time: "12 months",
-  },
-  {
-    age: "15–18 months",
-    items: ["MMR (1st dose)", "Japanese Encephalitis (2nd dose)", "6-in-1 booster"],
-    doses: 3,
-    primaryVaccine: "MMR",
-    time: "15–18 months",
-  },
-];
+import {
+  loadVaccinesForAllChildren,
+  saveVaccineStatus,
+} from "../../store/slice/vaccinationSlice";
+import { loadChildren } from "../../store/slice/childrenSlice";
+import { fromApiStatus, getChildVaccineDetail } from "../../services/healthService"; // << thêm import
 
-// --- detailed content for popup (example: Hepatitis B) ---
-const VACCINE_DETAILS = {
-  "Hepatitis B": {
-    about:
-      "Hepatitis B is a disease easily transmitted through injection (sharing needles/syringes), sexual intercourse, and from mother to child (during labor and delivery). It can cause liver cirrhosis and cancer and has a great impact on public health.",
-    vaccineNames: ["Engerix B", "Euvax B", "Hepavax"],
-    details: `For newborns
-
-* Standard 3-dose schedule
-- Dose 1: first injection
-- Dose 2: 1 month after dose one
-- Dose 3: 6 months after dose one
-
-* Special 4-dose schedule
-- Dose 1: first injection
-- Dose 2: 1 month after dose one
-- Dose 3: 2 months after dose one
-- Dose 4: 12 months after dose one
-
-This schedule is used when combined with other vaccines, for children whose mothers are infected with Hepatitis B, people who have recently been exposed to the disease source, migrants, or those who cannot comply with the standard regimen. A booster shot is given after 5 years.`,
-    sideEffects:
-      "Swelling, warmth, and redness at the injection site for 1–2 days",
-    required: "Yes",
-    scheduledDose: "Dose 1: best to inject within 24 hours after birth",
-  },
+// UI status meta
+const STATUS_META = {
+  NONE:    { label: "Update",       color: "#F871A0", text: "#fff" },
+  NOT_YET: { label: "Not injected", color: "#E5E7EB", text: "#111827" },
+  DONE:    { label: "Injected",     color: "#34D399", text: "#064E3B" },
+  SKIPPED: { label: "Skipped",      color: "#FCD34D", text: "#78350F" },
 };
 
-// ---------- small components ----------
-function DoseDots({ count = 3, onClick }) {
-  return (
-    <div className="flex gap-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <button
-          key={i}
-          onClick={() => onClick?.(i + 1)}
-          className="w-9 h-9 rounded-full bg-[#FFF4DC] text-[#4B5563] flex items-center justify-center shadow-inner"
-          style={{ boxShadow: "inset 0 0 0 2px #F2E5BC" }}
-          title={`Dose ${i + 1}`}
-        >
-          <span className="font-semibold">{i + 1}</span>
-        </button>
-      ))}
-    </div>
+// Map UI -> API
+const STATUS_TO_API = {
+  NOT_YET: "not_injected",
+  DONE: "injected",
+  SKIPPED: "skipped",
+};
+
+function UpdateDialog({ open, onClose, data, onSave, loading }) {
+  const [status, setStatus] = useState(data?.status || "NOT_YET");
+  const [date, setDate]     = useState(data?.updateTime?.slice(0, 10) || "");
+  const [note, setNote]     = useState(data?.note || "");
+
+  useEffect(() => {
+    setStatus(data?.status || "NOT_YET");
+    setDate(data?.updateTime?.slice(0, 10) || "");
+    setNote(data?.note || "");
+  }, [data]);
+
+  if (!open) return null;
+
+  const statusOptions = [
+    { key: "NOT_YET", label: STATUS_META.NOT_YET.label },
+    { key: "DONE",    label: STATUS_META.DONE.label },
+    { key: "SKIPPED", label: STATUS_META.SKIPPED.label },
+  ];
+
+  const Row = ({ label, children }) => (
+    <Box sx={{ display: "grid", gridTemplateColumns: "220px 1fr", borderBottom: "1px solid #D1D5DB" }}>
+      <Box sx={{ bgcolor: "#E3EBF6", color: "#1F2937", fontWeight: 700, fontSize: 14, px: 2, py: 1.25, borderRight: "1px solid #D1D5DB" }}>
+        {label}
+      </Box>
+      <Box sx={{ px: 2, py: 1.25 }}>{children}</Box>
+    </Box>
   );
-}
-
-// ---------- popup dialog ----------
-function VaccineDetailDialog({ open, onClose, data }) {
-  const [status, setStatus] = useState("not_yet");
-  const [date, setDate] = useState("");
-  const [note, setNote] = useState("");
-
-  if (!data) return null;
-
-  const details = VACCINE_DETAILS[data.vaccine] || {};
-  const save = () => {
-    // chỗ này bạn call API lưu trạng thái nếu muốn
-    console.log("SAVE VACCINE", { ...data, status, date, note });
-    onClose?.();
-  };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 700 }}>
-        Vaccination schedule: <span style={{ fontWeight: 600 }}>{data.vaccine}</span>
-      </DialogTitle>
-      <DialogContent dividers sx={{ bgcolor: "#F3F4F6" }}>
-        {/* Vaccine */}
-        <Row label="Vaccine" value={data.vaccine} />
-        <Row label="Child" value={`${data.child} 👶`} />
-        <Row label="Time" value={data.time || "-"} />
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2, overflow: "hidden" } }}>
+      <Box sx={{ position: "sticky", top: 0, zIndex: 1, bgcolor: "#fff", borderBottom: "1px solid #E5E7EB", px: 3, py: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: "#111827" }}>
+          Vaccination update — {data?.childName} • {data?.vaccine?.name || data?.vaccine?.vaccineName || "-"}
+        </Typography>
+      </Box>
 
-        {/* Status */}
-        <div className="grid grid-cols-3 gap-3 items-center py-2">
-          <div className="text-sm font-semibold text-slate-700">Status</div>
-          <div className="col-span-2">
-            <div className="flex items-center gap-3">
-              <FormControl size="small" sx={{ minWidth: 160 }}>
+      {loading ? (
+        <Box sx={{ p: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <DialogContent sx={{ p: 0, maxHeight: "80vh" }}>
+          <Row label="Vaccine">
+            <Typography sx={{ fontWeight: 700 }}>
+              {data?.vaccine?.name || data?.vaccine?.vaccineName || "-"}
+            </Typography>
+          </Row>
+
+          <Row label="Child">
+            <Typography>{data?.childName}</Typography>
+          </Row>
+
+          <Row label="Status">
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <FormControl size="small" sx={{ minWidth: 220 }}>
                 <InputLabel id="vax-status">Status</InputLabel>
                 <Select
                   labelId="vax-status"
@@ -183,9 +94,9 @@ function VaccineDetailDialog({ open, onClose, data }) {
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                 >
-                  <MenuItem value="not_yet">Not yet</MenuItem>
-                  <MenuItem value="scheduled">Scheduled</MenuItem>
-                  <MenuItem value="done">Done</MenuItem>
+                  {statusOptions.map((opt) => (
+                    <MenuItem key={opt.key} value={opt.key}>{opt.label}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
 
@@ -197,191 +108,273 @@ function VaccineDetailDialog({ open, onClose, data }) {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
-            </div>
-          </div>
-        </div>
+            </Box>
+          </Row>
 
-        <Row label="Scheduled Dose" value={details.scheduledDose || "-"} />
-        <Row label="About" value={details.about || "—"} multiline />
+          <Row label="Note">
+            <TextField fullWidth multiline minRows={3} placeholder="Add your note" value={note} onChange={(e) => setNote(e.target.value)} />
+          </Row>
 
-        <Row
-          label="Vaccine Name"
-          value={
-            details.vaccineNames
-              ? "• " + details.vaccineNames.join("\n• ")
-              : "—"
-          }
-          multiline
-        />
-        <Row label="Details" value={details.details || "—"} multiline />
-        <Row label="Side Effects" value={details.sideEffects || "—"} multiline />
-        <Row label="Required?" value={details.required || "—"} />
+                <Row label="Description">
+            <Typography sx={{ whiteSpace: "pre-wrap" }}>
+              {data?.vaccine?.description || "-"}
+            </Typography>
+          </Row>
+          <Row label="About">
+            <Typography sx={{ whiteSpace: "pre-wrap" }}>
+              {data?.vaccine?.about || "-"}
+            </Typography>
+          </Row>
+          <Row label="Recommended date">
+            <Typography>{data?.vaccine?.recommendedDate || "-"}</Typography>
+          </Row>
+          <Row label="Required?">
+            <Typography>{data?.vaccine?.required ? "Yes" : "No"}</Typography>
+          </Row>
 
-        <div className="grid grid-cols-3 gap-3 items-start py-2">
-          <div className="text-sm font-semibold text-slate-700">Note</div>
-          <div className="col-span-2">
-            <TextField
-              placeholder="Leave your note here"
-              multiline
-              minRows={3}
-              fullWidth
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
-        </div>
-      </DialogContent>
 
-      <DialogActions sx={{ px: 2.5, py: 1.5 }}>
-        <Button onClick={onClose} variant="text" color="inherit">
-          Cancel
-        </Button>
-        <Button onClick={save} variant="contained" sx={{ bgcolor: "#2CC1AE" }}>
-          Save
+          {data?.vaccine?.symptoms && (
+            <Row label="Symptoms / Side Effects">
+              <Typography sx={{ whiteSpace: "pre-wrap" }}>{data?.vaccine?.symptoms}</Typography>
+            </Row>
+          )}
+        </DialogContent>
+      )}
+
+      <DialogActions sx={{ px: 2.5, py: 1.75, borderTop: "1px solid #E5E7EB" }}>
+        <Button onClick={onClose} variant="text" sx={{ fontWeight: 700, color: "#374151" }}>CANCEL</Button>
+        <Button
+          onClick={() => onSave({ status, date, note })}
+          variant="contained"
+          sx={{ bgcolor: "#22C55E", fontWeight: 800, px: 3, "&:hover": { bgcolor: "#16A34A" } }}
+          disabled={loading}
+        >
+          SAVE
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
 
-function Row({ label, value, multiline }) {
-  return (
-    <div className="grid grid-cols-3 gap-3 items-start py-2">
-      <div className="text-sm font-semibold text-slate-700">{label}</div>
-      <div className="col-span-2">
-        {multiline ? (
-          <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans">
-            {value}
-          </pre>
-        ) : (
-          <div className="text-sm text-slate-700">{value}</div>
-        )}
-      </div>
-    </div>
-  );
-}
+export default function VaccinationSchedulePage() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { childId: childIdParam } = useParams();
 
-// ---------- main page ----------
-export default function VaccinationSchedulePage({ onBack, babyName = "Yến Nhi" }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const children = useSelector((s) => s.children?.list || []);
+  const vaccinesByChildId = useSelector((s) => s.vaccination?.vaccinesByChildId || {});
+  const loading = useSelector((s) => s.vaccination?.loading || s.children?.loading);
+
   const [selected, setSelected] = useState(null);
+  const [dialogLoading, setDialogLoading] = useState(false);
 
-  const openDetail = (row, dose) => {
+  // Load children nếu state đang trống
+  useEffect(() => {
+    if (!children?.length) dispatch(loadChildren());
+  }, [children?.length, dispatch]);
+
+  // Khi có children -> load vaccines (1 bé nếu có childIdParam, ngược lại tất cả)
+  useEffect(() => {
+    if (!children?.length) return;
+    const id = childIdParam ? Number(childIdParam) : null;
+    if (id) {
+      const child = children.find((c) => Number(c.id) === id);
+      if (child) dispatch(loadVaccinesForAllChildren([child]));
+    } else {
+      dispatch(loadVaccinesForAllChildren(children));
+    }
+  }, [children, childIdParam, dispatch]);
+
+const openUpdate = async (child, row) => {
+  setDialogLoading(true);
+  try {
+    let vid = row?.vaccine?.id;
+    if (Array.isArray(vid)) vid = vid[0];
+    const cid = Number(child?.id);
+    vid = Number(vid);
+    if (!cid || !vid) return;
+
+    const detail = await getChildVaccineDetail(cid, vid);
+    const v = detail?.Vaccine || {};
+
     setSelected({
-      vaccine: row.primaryVaccine || "Vaccine",
-      dose,
-      child: babyName,
-      time: row.time,
+      childId: cid,
+      childName: `${child.firstName || ""} ${child.lastName || ""}`.trim() || "Child",
+      vaccineId: vid,
+
+      // Dùng mapper để ra UI status
+      status: fromApiStatus(detail?.status ?? row?.status),
+      updateTime: detail?.updateTime || row?.updateTime || null,
+      note: detail?.note ?? row?.note ?? "",
+
+      vaccine: {
+        id: Number(v?.id),
+        name: v?.vaccineName || row?.vaccine?.name || "",
+        diseaseName: v?.diseaseName || row?.vaccine?.diseaseName || "",
+        description: v?.description ?? row?.vaccine?.description ?? "",
+        about: v?.about ?? "",
+        required: Boolean(v?.required),
+        recommendedDate: v?.recommendedDate ?? "",
+        symptoms: v?.symptoms ?? "",
+      },
     });
-    setDialogOpen(true);
+  } catch (e) {
+    console.error("openUpdate error", e);
+  } finally {
+    setDialogLoading(false);
+  }
+};
+
+
+  const handleSave = ({ status, date, note }) => {
+    if (!selected) return;
+const apiStatus = STATUS_TO_API[status] || "not_injected";
+    dispatch(
+      saveVaccineStatus({
+        childId: selected.childId,
+        vaccineId: selected.vaccineId,
+        payload: { status: apiStatus, updateTime: date || null, note },
+      })
+    );
+    setSelected(null);
   };
 
+  const title = childIdParam
+    ? `Vaccination schedule — Child #${childIdParam}`
+    : "Vaccination schedule (All children)";
+
+  const childrenToRender = childIdParam
+    ? children.filter((c) => String(c.id) === String(childIdParam))
+    : children;
+
   return (
-    <div className="py-4">
+    <div className="py-4 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <IconButton
-            onClick={onBack}
+            onClick={() => navigate(-1)}
             sx={{
-              width: 40,
-              height: 40,
-              borderRadius: "999px",
-              background: "#FFF",
-              boxShadow: "0 2px 6px rgba(0,0,0,.08)",
-              "&:hover": { background: "#FFF" },
+              width: 40, height: 40, borderRadius: "999px", background: "#FFF",
+              boxShadow: "0 2px 6px rgba(0,0,0,.08)", "&:hover": { background: "#FFF" },
             }}
           >
             <ArrowBackIosNewRoundedIcon fontSize="small" />
           </IconButton>
-
           <div className="w-10 h-10 rounded-full bg-[#FFE7F7] flex items-center justify-center shadow-sm">
             <VaccinesRoundedIcon />
           </div>
-
           <Typography variant="h5" sx={{ fontWeight: 700, color: "#374151" }}>
-            Vaccination schedule
+            {title}
           </Typography>
         </div>
-
-        <Chip
-          label={
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{babyName}</span>
-              <BabyChangingStationRoundedIcon className="text-rose-400" />
-            </div>
-          }
+        <Button
+          onClick={() => navigate("/home/health/vaccination/summary")}
           sx={{
-            bgcolor: "#E6FBF7",
-            color: "#066C61",
-            borderRadius: "18px",
-            height: 40,
-            px: 1.5,
-            fontWeight: 700,
+            bgcolor: "#1B9C9E", color: "#FFFBEF", fontWeight: 700, textTransform: "none",
+            fontSize: "0.9rem", borderRadius: "999px", px: 2.5, py: 0.7,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.08)", transition: "all 0.2s ease",
+            "&:hover": { bgcolor: "#138C8E", boxShadow: "0 3px 8px rgba(0,0,0,0.12)" },
           }}
-        />
+        >
+          Summary
+        </Button>
       </div>
 
-      {/* Table */}
-      <Card elevation={0} sx={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 6px 14px rgba(0,0,0,.06)" }}>
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ background: "#E5E7EB" }}>
-                  <TableCell
-                    align="center"
-                    sx={{ width: 180, fontWeight: 700, color: "#374151", textAlign: "center" }}
-                  >
-                    Age
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ fontWeight: 700, color: "#374151", textAlign: "center" }}
-                  >
-                    Vaccine &amp; Recommended Time
-                  </TableCell>
-                  <TableCell
-                    align="center"
-                    sx={{ width: 220, fontWeight: 700, color: "#374151", textAlign: "center" }}
-                  >
-                    Status
-                  </TableCell>
-                </TableRow>
-              </TableHead>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <CircularProgress />
+        </div>
+      ) : null}
 
-              <TableBody>
-                {rows.map((r, idx) => (
-                  <TableRow key={idx} sx={{ "& td": { borderColor: "#D1D5DB" }, background: "#FFF" }}>
-                    <TableCell sx={{ background: "#F3F4F6", color: "#374151", fontWeight: 600 }}>
-                      {r.age}
-                    </TableCell>
-                    <TableCell>
-                      <ul className="list-disc pl-4 text-[#374151]">
-                        {r.items.map((t, i) => (
-                          <li key={i} className="leading-6">{t}</li>
-                        ))}
-                      </ul>
-                    </TableCell>
-                    <TableCell align="center">
-                      <DoseDots
-                        count={r.doses || 3}
-                        onClick={(dose) => openDetail(r, dose)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
+      {/* Mỗi bé một card */}
+      {childrenToRender.map((child) => {
+        const rows = vaccinesByChildId[child.id] || [];
+        return (
+          <Card
+            key={child.id}
+            elevation={0}
+            sx={{
+              borderRadius: 4, overflow: "hidden", border: "1px solid #E5E7EB",
+              boxShadow: "0 6px 14px rgba(0,0,0,0.06)",
+            }}
+          >
+            <CardContent sx={{ p: 0 }}>
+              {/* Header child */}
+              <div className="flex items-center justify-between px-4 py-3 bg-[#F8FAFC] border-b border-[#E5E7EB]">
+                <Typography sx={{ fontWeight: 800, color: "#0F172A" }}>
+                  {(child.firstName || "") + " " + (child.lastName || "")}
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#334155" }}>
+                  DOB: {child.dob ? new Date(child.dob).toLocaleDateString() : "-"}
+                </Typography>
+              </div>
 
-      {/* Dialog */}
-      <VaccineDetailDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+              {/* Header row */}
+              <div className="grid grid-cols-3 bg-[#38BDF8] text-white font-semibold text-center py-3">
+                <div>Vaccine</div>
+                <div>Description</div>
+                <div>Status</div>
+              </div>
+
+              {/* Body */}
+              {rows.length === 0 ? (
+                <div className="p-4 text-center text-slate-500">No vaccines found</div>
+              ) : (
+                rows.map((r, idx) => {
+
+                  const uiStatus = STATUS_META[r.status] ? r.status : fromApiStatus(r.status);
+                  const meta = STATUS_META[uiStatus] || STATUS_META.NONE; 
+                  return (
+                    <div
+                      key={`${child.id}-${r.vaccine?.id}-${idx}`}
+                      className={`grid grid-cols-3 text-sm ${idx % 2 === 0 ? "bg-[#F0F9FF]" : "bg-white"} border-t border-[#E5E7EB]`}
+                    >
+                      <div className="p-4 text-center font-medium text-slate-700 border-r border-[#E5E7EB]">
+                        {r.vaccine?.name}
+                        <div className="text-xs text-slate-500">{r.vaccine?.diseaseName}</div>
+                      </div>
+
+                      <div className="p-4 text-slate-700 whitespace-pre-wrap border-r border-[#E5E7EB]">
+                        {r.vaccine?.description || "-"}
+                      </div>
+
+                      <div className="p-4 flex items-center justify-center">
+                        <Button
+                          variant="contained"
+                          onClick={() => openUpdate(child, r)}
+                          sx={{
+                            bgcolor: meta.color || "#E5E7EB",
+                            color:   meta.text  || "#111827",
+                            textTransform: "none",
+                            fontWeight: 700,
+                            "&:hover": { filter: "brightness(0.95)" },
+                          }}
+                          startIcon={
+                            r.status && r.status !== "NONE" ? (
+                              <CircleIcon sx={{ fontSize: 10, color: meta.text }} />
+                            ) : null
+                          }
+                        >
+                          {meta.label}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {/* Update dialog */}
+      <UpdateDialog
+        open={!!selected || dialogLoading}
+        loading={dialogLoading}
+        onClose={() => setSelected(null)}
         data={selected}
+        onSave={handleSave}
       />
     </div>
   );

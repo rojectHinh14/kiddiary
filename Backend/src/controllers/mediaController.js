@@ -38,5 +38,31 @@ const getAllMediaByUser = async (req, res) => {
       .json({ message: "Server error", error: err.message });
   }
 };
+const deleteMedia = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const mediaId = req.params.id;
+    const result = await mediaService.deleteMedia(userId, mediaId);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Error deleting media:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
+  }
+};
 
-export default { uploadMedia, getAllMediaByUser };
+const searchByAiTags = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { keyword } = req.query;
+    const result = await mediaService.searchByAiTags(userId, keyword);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Error searching media:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: err.message });
+  }
+};
+export default { uploadMedia, getAllMediaByUser, deleteMedia, searchByAiTags };
