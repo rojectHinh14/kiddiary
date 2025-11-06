@@ -1,5 +1,5 @@
-// AlbumDetail.jsx
-import { useState, useEffect } from "react";
+// src/pages/Album/AlbumDetail.jsx
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { getAlbumByIdService } from "../../services/albumService";
@@ -8,122 +8,296 @@ import AlbumCreateWizard from "./AlbumCreateWizard";
 export default function AlbumDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [album, setAlbum] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
 
-  useEffect(() => {
-    fetchAlbum();
-  }, [id]);
+  // select mode
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set());
 
-  const fetchAlbum = async () => {
+  const mapResponse = (a) => ({
+    ...a,
+    title: a.albumName,
+    year: new Date(a.createdAt).getFullYear(),
+    description: a.description || "No description yet.",
+    items: (a.Media || []).map((m) => ({
+      id: m.id,
+      img: m.fileUrl?.startsWith("/")
+        ? `${import.meta.env.VITE_BACKEND_URL}${m.fileUrl}`
+        : m.fileUrl,
+      title: m.description || "Untitled",
+      date: m.date || a.createdAt,
+      desc: m.aiTags || "",
+    })),
+  });
+
+  const refetch = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await getAlbumByIdService(id);
-      if (response.data.errCode === 0) {
-        const rawAlbum = response.data.data;
-        const mappedAlbum = {
-          ...rawAlbum,
-          title: rawAlbum.albumName,
-          year: new Date(rawAlbum.createdAt).getFullYear(),
-          description: rawAlbum.description || "No description",
-          items: (rawAlbum.Media || []).map((media) => ({
-            id: media.id,
-            img: media.fileUrl.startsWith("/")
-              ? `http://localhost:8080${media.fileUrl}`
-              : media.fileUrl,
-            title: media.description || "Untitled photo",
-            date: media.date || rawAlbum.createdAt,
-            desc: media.aiTags || "No description",
-          })),
-        };
-        setAlbum(mappedAlbum);
-      }
-    } catch (error) {
-      console.error("Error fetching album:", error);
+      const res = await getAlbumByIdService(id);
+      if (res.data?.errCode === 0) setAlbum(mapResponse(res.data.data));
     } finally {
       setLoading(false);
     }
+  }, [id]);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  // ESC to exit select mode
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setSelectMode(false);
+        setSelected(new Set());
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const handleFinishAdd = async () => {
+    setShowWizard(false);
+    await refetch();
   };
 
-  const handleFinishAdd = () => {
-    fetchAlbum(); // Refetch để update items
-    setShowWizard(false);
+  // --- select helpers ---
+  const toggleSelect = (mediaId) => {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(mediaId)) n.delete(mediaId);
+      else n.add(mediaId);
+      return n;
+    });
   };
+
+  const selectAll = () => {
+    if (!album?.items?.length) return;
+    setSelected(new Set(album.items.map((x) => x.id)));
+  };
+
+  const clearSelect = () => setSelected(new Set());
+
+  const handleRemove = async () => {
+    if (selected.size === 0) return;
+    const confirmText =
+      selected.size === 1
+        ? "Remove this moment from the album?"
+        : `Remove ${selected.size} moments from the album?`;
+    if (!confirm(confirmText)) return;
+
+    // API: bạn cần có service này trong albumService
+    // removeItemsFromAlbumService(albumId: string|number, mediaIds: number[])
+    // const res = await removeItemsFromAlbumService(id, Array.from(selected));
+    // if (res?.data?.errCode === 0) {
+    //   await refetch();
+    //   setSelectMode(false);
+    //   setSelected(new Set());
+    // }
+  };
+
+  /* ---------- UI ---------- */
 
   if (loading) {
-    return <div className="text-center py-8">Loading album...</div>;
+    return (
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 py-8">
+        <div className="sticky top-0 z-10 -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 backdrop-blur bg-[#FFF9F0]/70 border-b">
+          <div className="h-8 w-28 rounded-full bg-black/5 animate-pulse" />
+        </div>
+
+        <div className="mt-6 grid gap-4">
+          <div className="h-28 rounded-2xl bg-black/5 animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="aspect-[4/3] rounded-2xl bg-black/5 animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!album) {
-    return <div className="text-center py-8">Album not found</div>;
-  }
-
-  return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      {/* Back & Add button */}
-      <div className="flex items-center justify-between mb-4">
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-16 text-center">
+        <p className="text-gray-600">Album not found.</p>
         <button
           onClick={() => navigate(-1)}
-          className="text-sm hover:underline"
+          className="mt-4 px-4 py-2 rounded-xl border hover:bg-black/5"
         >
-          ← Back
-        </button>
-        <button
-          onClick={() => setShowWizard(true)}
-          className="px-4 py-2 bg-[#FF6B6B] text-white rounded-md font-medium hover:bg-[#FF6B6B]/90"
-        >
-          Add more moments
+          Go back
         </button>
       </div>
+    );
+  }
 
-      {/* Year & Desc */}
-      <h1 className="text-4xl font-bold">{album.year}</h1>
-      <p className="mt-2 text-gray-600">{album.description}</p>
+  const total = album.items.length;
+  const selectedCount = selected.size;
 
-      {/* Title & Nav */}
-      <div className="mt-8 flex items-center justify-between border-b pb-2">
-        <h2 className="text-2xl font-semibold">{album.title}</h2>
-        <div className="flex items-center gap-4 text-gray-500">
-          <button className="hover:text-black">‹</button>
-          <button className="hover:text-black">›</button>
+  return (
+    <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6">
+
+      {/* Sticky toolbar */}
+      <div className="sticky top-0 z-10 -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 backdrop-blur bg-[#FFF9F0]/70 border-b">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 border hover:bg-black/5"
+          >
+            <span className="text-lg">←</span>
+            <span className="font-medium">Back</span>
+          </button>
+
+          {!selectMode ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectMode(true)}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-medium hover:bg-black/5"
+                title="Select moments to remove"
+              >
+                Select
+              </button>
+              <button
+                onClick={() => setShowWizard(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#FF6B6B] text-white px-4 py-2 font-medium shadow hover:brightness-95"
+              >
+                ＋ Add more moments
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={selectAll}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-black/5"
+                title="Select all"
+              >
+                Select all
+              </button>
+              <button
+                onClick={clearSelect}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-black/5"
+                title="Clear"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleRemove}
+                disabled={selectedCount === 0}
+                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 font-medium shadow
+                  ${selectedCount === 0 ? "bg-red-200 text-white cursor-not-allowed" : "bg-red-600 text-white hover:bg-red-700"}`}
+              >
+                Remove {selectedCount > 0 ? `(${selectedCount})` : ""}
+              </button>
+              <button
+                onClick={() => { setSelectMode(false); setSelected(new Set()); }}
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 hover:bg-black/5"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Grid items */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        {album.items.map((it) => (
-          <div
-            key={it.id}
-            className="rounded-xl overflow-hidden border bg-white shadow-sm"
-          >
-            <div className="relative">
-              <img
-                src={it.img}
-                alt=""
-                className="w-full aspect-[4/3] object-cover"
-              />
-            </div>
-            <div className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="font-medium">{it.title}</div>
-                <div className="text-xs text-gray-500">
-                  📅 {format(new Date(it.date), "MMM dd")}
-                </div>
-              </div>
-              <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                {it.desc}
-              </p>
-            </div>
+      {/* Album hero */}
+      <section className="mt-6 rounded-2xl border bg-white/70 shadow-sm">
+        <div className="p-5 sm:p-7">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold">
+              {album.year}
+            </span>
+            <span className="px-3 py-1 rounded-full bg-black/5 text-gray-700 text-sm">
+              {total} {total === 1 ? "photo" : "photos"}
+            </span>
           </div>
-        ))}
-      </div>
 
-      {/* Wizard cho add more */}
+          <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+            {album.title}
+          </h1>
+
+          <p className="mt-2 text-gray-600 max-w-3xl">{album.description}</p>
+        </div>
+      </section>
+
+      {/* Grid */}
+      {total === 0 ? (
+        <div className="mt-10 rounded-2xl border bg-white/70 p-10 text-center">
+          <p className="text-gray-600">This album is empty. Start adding moments!</p>
+          <button
+            onClick={() => setShowWizard(true)}
+            className="mt-4 rounded-xl bg-[#FF6B6B] text-white px-4 py-2 font-medium hover:brightness-95"
+          >
+            Add photos
+          </button>
+        </div>
+      ) : (
+        <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 ${selectMode ? "select-none" : ""}`}>
+          {album.items.map((it) => {
+            const checked = selected.has(it.id);
+            return (
+              <figure
+                key={it.id}
+                className={`group overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow ${
+                  checked ? "ring-2 ring-red-400" : ""
+                }`}
+                onClick={() => {
+                  if (selectMode) toggleSelect(it.id);
+                }}
+              >
+                <div className="relative">
+                  <img
+                    src={it.img}
+                    alt={it.title}
+                    className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+
+                  {/* checkbox overlay khi selectMode */}
+                  {selectMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleSelect(it.id); }}
+                      className={`absolute top-3 left-3 h-7 w-7 rounded-full border-2 flex items-center justify-center backdrop-blur
+                        ${checked ? "bg-red-500 border-red-500" : "bg-white/80 border-white"}
+                      `}
+                      title={checked ? "Unselect" : "Select"}
+                    >
+                      {checked ? (
+                        <svg viewBox="0 0 20 20" className="h-4 w-4 text-white">
+                          <path d="M7.5 13.1 3.9 9.5l-1.4 1.4L7.5 16 18 5.5 16.6 4.1z" />
+                        </svg>
+                      ) : (
+                        <span className="block h-3 w-3 rounded-full bg-black/20" />
+                      )}
+                    </button>
+                  )}
+
+                  {/* caption */}
+                  <figcaption className="absolute inset-x-0 bottom-0 p-3 sm:p-4 bg-gradient-to-t from-black/60 to-transparent text-white">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold">{it.title}</div>
+                        {it.desc && (
+                          <div className="truncate text-xs opacity-90">{it.desc}</div>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                        {format(new Date(it.date), "MMM dd")}
+                      </span>
+                    </div>
+                  </figcaption>
+                </div>
+              </figure>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Wizard */}
       {showWizard && (
         <AlbumCreateWizard
           onClose={() => setShowWizard(false)}
-          albumId={id} // Mode add (không có initialAlbumInfo)
+          albumId={id}
           onFinish={handleFinishAdd}
         />
       )}

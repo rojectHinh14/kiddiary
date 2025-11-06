@@ -155,21 +155,7 @@ export default function NewPostDialog({ open, onClose, onSubmit }) {
             />
 
             {/* People */}
-            <div>
-              <div className="text-gray-700 mb-2">
-                Who&apos;s in this moment?
-              </div>
-              <TextField
-                placeholder="Type names, separated by commas"
-                value={people}
-                onChange={(e) => setPeople(e.target.value)}
-                fullWidth
-                InputProps={{
-                  className:
-                    "!bg-white !rounded-xl !border !border-gray-200 px-3 py-2",
-                }}
-              />
-            </div>
+           
           </div>
         </div>
       </DialogContent>

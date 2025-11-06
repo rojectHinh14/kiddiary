@@ -24,6 +24,8 @@ import PsychologyRoundedIcon from "@mui/icons-material/PsychologyRounded";
 import BabyChangingStationRoundedIcon from "@mui/icons-material/BabyChangingStationRounded";
 import ScaleRoundedIcon from "@mui/icons-material/ScaleRounded";
 import { getChildrenService } from "../../services/childService";
+import { useNavigate } from "react-router-dom";
+import ChatBox from "../../components/ChatBox";
 
 // ---------- helpers ----------
 const Stat = ({ label, value, unit }) => (
@@ -163,18 +165,18 @@ const calculateBMI = (weight, height) => {
 };
 
 const getAvatarSrc = (avatarUrl) => {
-  if (avatarUrl.startsWith("http")) {
-    return avatarUrl;
-  }
-  return `http://localhost:8080${avatarUrl}`; // Adjust base URL if needed
+  if (!avatarUrl) return undefined;               
+  return avatarUrl.startsWith("http")
+    ? avatarUrl
+    : `http://localhost:8080${avatarUrl}`;
 };
-
 // ---------- main component ----------
 export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
   const [children, setChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchChildren = async () => {
@@ -236,7 +238,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
+    <div className="p-4 md:p-6 lg:p-8 bg-white">
       {/* top card */}
       <Card
         elevation={0}
@@ -258,7 +260,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
               <div className="flex items-center gap-3 md:gap-4">
                 <Avatar
                   sx={{ width: 44, height: 44 }}
-                  src={getAvatarSrc(selectedChild.avatarUrl)}
+                  src={getAvatarSrc(selectedChild?.avatarUrl)} 
                 />
                 <div
                   style={{
@@ -339,16 +341,22 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           title="Vaccination Schedule"
           icon={<VaccinesRoundedIcon />}
           bg="#F2CCFF"
-          onClick={onOpenVaccination}
+          onClick={() => navigate(`/home/health/vaccination/${selectedChild?.id}`)}
         />
         <Tile
           title="Daily Milk Log"
           icon={<LocalDrinkRoundedIcon />}
+          onClick={() => navigate("/home/health/milk")}
           bg="#CFE6FF"
         />
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Tile title="Weight, Height" icon={<ScaleRoundedIcon />} bg="#BFEDE1" />
+        <Tile
+        title="Weight, Height"
+        icon={<ScaleRoundedIcon />}
+        bg="#BFEDE1"
+        onClick={() => navigate("/home/health/growth")}
+      />
         <Tile
           title="Sleep Tracker"
           icon={<BedtimeRoundedIcon />}
@@ -368,6 +376,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           bg="#CFEBD7"
         />
       </div>
+      <ChatBox/>
     </div>
   );
 }

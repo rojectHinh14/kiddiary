@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       familyId: { type: DataTypes.INTEGER, allowNull: false },
       userId: { type: DataTypes.INTEGER, allowNull: false },
-      relationCode: { type: DataTypes.STRING }, // FK -> AllCode.keyMap
+      relationCode: { type: DataTypes.STRING }, 
     },
     {
       sequelize,
