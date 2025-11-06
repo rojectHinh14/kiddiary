@@ -111,7 +111,8 @@ export default function ChatBox({
       setMessages((prev) => [...prev, { role: "bot", text: errorMsg }]);
     } finally {
       setLoading(false);
-    }
+    };
+
   };
 
   const messagesEndRef = useRef(null);
