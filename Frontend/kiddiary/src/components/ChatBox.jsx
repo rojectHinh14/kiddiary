@@ -1,13 +1,19 @@
-// ChatBox.jsx
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import axios from "axios";
-import { ChatWindow } from "./home/ChatWindow";
+import { useEffect, useRef } from "react";
 
-export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary Support" }) {
-  const [isChatOpen, setIsChatOpen] = useState(false);   // <- mặc định đóng
+export default function ChatBox({
+  logoSrc = "/chatbox/logo.png",
+  title = "KidDiary Support",
+}) {
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
-  const [messages, setMessages] = useState([{ role: "bot", text: "Xin chào, mình có thể giúp gì cho bạn?" }]);
+  const [messages, setMessages] = useState([
+    {
+      role: "bot",
+      text: "Xin chào, mình có thể giúp gì cho bạn?",
+    },
+  ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -42,7 +48,7 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
           },
         ]);
       }
-      
+
       setHistoryLoaded(true);
     } catch (err) {
       console.error("Failed to load chat history:", err);
@@ -56,8 +62,7 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
       setTimeout(() => {
         setIsChatOpen(false);
         setIsClosing(false);
-        setIsMaximized(false);
-      }, 250); // match animation
+      }, 300);
     } else {
       setIsChatOpen(true);
     }
@@ -66,10 +71,12 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
-    const userMsg = { role: "user", text: input };
-    setMessages((p) => [...p, userMsg]);
+
+    const newUserMessage = { role: "user", text: input };
+    setMessages((prev) => [...prev, newUserMessage]);
     setInput("");
     setLoading(true);
+
     try {
       const res = await axios.post(
         "http://localhost:8080/api/gemini/chat",
@@ -81,7 +88,7 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
 
       const botReply =
         res.data.reply || "Xin lỗi, mình không nhận được phản hồi.";
-      
+
       // Nếu có kết quả từ database, hiển thị thêm
       const dbResults = res.data.dbResults;
       const totalResults = res.data.totalResults || 0;
@@ -115,24 +122,29 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      {/* Nút mở/đóng chat (logo tròn) */}
+      {/* Nút mở/đóng chat */}
       <button
         onClick={handleToggle}
         aria-label={isChatOpen ? "Đóng hộp chat" : "Mở hộp chat"}
         className="w-16 h-16 rounded-full bg-[#41B3A2] flex items-center justify-center shadow-2xl transition-all duration-300 hover:bg-[#379889] focus:outline-none focus:ring-4 focus:ring-[#41B3A2]/30"
       >
         {!isChatOpen ? (
-          <img src={logoSrc} alt="Logo" className="w-10 h-10 rounded-full object-cover" draggable={false} />
+          <img
+            src={logoSrc}
+            alt="Logo"
+            className="w-10 h-10 rounded-full object-cover"
+            draggable={false}
+          />
         ) : (
           <span className="text-3xl leading-none font-bold text-white">×</span>
         )}
       </button>
 
-      {/* Chat mini (dock) – chỉ hiện khi mở */}
-      {(isChatOpen || isClosing) && !isMaximized && (
+      {/* Chat box */}
+      {(isChatOpen || isClosing) && (
         <div
           className={[
-            "absolute bottom-20 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden",
+            "absolute bottom-20 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden",
             isClosing ? "animate-fadeOutDown" : "animate-fadeInUp",
           ].join(" ")}
           role="dialog"
@@ -167,7 +179,6 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
                   />
                   <div className="bg-gray-100 rounded-xl px-3 py-2 max-w-[90%]">
                     <span className="font-semibold">Bot:</span> {msg.text}
-                    
                     {/* Hiển thị kết quả nếu có */}
                     {msg.total > 0 && msg.results && (
                       <div className="mt-2 text-xs text-gray-600">
@@ -187,7 +198,8 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
                               </a>
                             ) : (
                               <span>
-                                📁 {item.albumName} ({item.Media?.length || 0} ảnh)
+                                📁 {item.albumName} ({item.Media?.length || 0}{" "}
+                                ảnh)
                               </span>
                             )}
                           </div>
@@ -214,38 +226,44 @@ export default function ChatBox({ logoSrc="/chatbox/logo.png", title="KidDiary S
               )
             )}
             {loading && (
-              <div className="text-gray-400 text-sm italic">Đang trả lời...</div>
+              <div className="text-gray-400 text-sm italic">
+                Đang trả lời...
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-      {/* Modal fullscreen */}
-      {isChatOpen && isMaximized && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="chatbox-title">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setIsMaximized(false)} />
-          <div className="relative bg-white w-[min(900px,92vw)] h-[min(70vh,85vh)] rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-fadeInUp">
-            <ChatWindow
-              logoSrc={logoSrc}
-              title={title}
-              isMaximized={isMaximized}
-              setIsMaximized={setIsMaximized}
-              messages={messages}
-              loading={loading}
-              input={input}
-              setInput={setInput}
-              handleSend={handleSend}
-              messagesEndRef={messagesEndRef}
+          {/* Ô nhập */}
+          <form className="flex border-t" onSubmit={handleSend}>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Nhập tin nhắn..."
+              className="flex-1 px-3 py-2 text-sm outline-none"
             />
-          </div>
+            <button
+              type="submit"
+              className="px-4 py-2 text-[#41B3A2] font-semibold hover:text-[#379889] focus:outline-none"
+            >
+              Gửi
+            </button>
+          </form>
         </div>
       )}
 
-      {/* Animations */}
+      {/* Animation */}
       <style>{`
-        @keyframes fadeInUp { from{opacity:0; transform:translateY(20px)} to{opacity:1; transform:translateY(0)} }
-        @keyframes fadeOutDown { from{opacity:1; transform:translateY(0)} to{opacity:0; transform:translateY(20px)} }
-        .animate-fadeInUp { animation: fadeInUp .25s ease-out forwards; }
-        .animate-fadeOutDown { animation: fadeOutDown .25s ease-in forwards; }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOutDown {
+          from { opacity: 1; transform: translateY(0); }
+          to   { opacity: 0; transform: translateY(20px); }
+        }
+        .animate-fadeInUp { animation: fadeInUp 0.3s ease-out forwards; }
+        .animate-fadeOutDown { animation: fadeOutDown 0.3s ease-in forwards; }
       `}</style>
     </div>
   );

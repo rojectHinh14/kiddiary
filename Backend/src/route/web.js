@@ -5,11 +5,69 @@ import mediaController from "../controllers/mediaController.js";
 import albumController from "../controllers/albumController.js";
 import childController from "../controllers/childController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
+import passport from "../config/passport.js";
+import { generateToken } from "../helpers/generateToken.js";
 let router = express.Router();
 let initWebRoutes = (app) => {
   router.get("/about", homeController.getHomePage);
   router.post("/api/login", userController.handleLogin);
   router.post("/api/register", userController.handleRegister);
+  router.get(
+    "/auth/google",
+    passport.authenticate("google", { scope: ["profile", "email"] })
+  );
+  router.get(
+    "/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/login" }),
+    (req, res) => {
+      const token = generateToken(req.user);
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+      });
+      res.redirect("http://localhost:5173/home");
+    }
+  );
+
+  router.get(
+    "/auth/facebook",
+    passport.authenticate("facebook", { scope: ["email"] })
+  );
+  router.get(
+    "/auth/facebook/callback",
+    passport.authenticate("facebook", { failureRedirect: "/login" }),
+    (req, res) => {
+      const token = generateToken(req.user);
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      res.redirect("http://localhost:5173/home");
+    }
+  );
+
+  router.get(
+    "/auth/github",
+    passport.authenticate("github", { scope: ["user:email"] })
+  );
+  router.get(
+    "/auth/github/callback",
+    passport.authenticate("github", { failureRedirect: "/login" }),
+    (req, res) => {
+      const token = generateToken(req.user);
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+      res.redirect("http://localhost:5173/home");
+    }
+  );
 
   //api nào cần token thì thêm token vào route như ví dụ:
   //router.get("/getAllUsers", verifyToken, userController.getAllUsers);

@@ -6,6 +6,8 @@ import viewEngine from "./config/viewEngine.js";
 import initWebRoutes from "./route/web.js";
 import dotenv from "dotenv";
 import geminiRoute from "./route/geminiRoute.js";
+import passport from "./config/passport.js";
+import session from "express-session";
 const path = require("path");
 dotenv.config();
 
@@ -23,6 +25,15 @@ app.use(cookieParser());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use(
+  session({
+    secret: "secretkey",
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 viewEngine(app);
 initWebRoutes(app);
 

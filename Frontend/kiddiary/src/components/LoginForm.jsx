@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { FiUser, FiLock } from "react-icons/fi";
+import { FaGoogle, FaFacebookF, FaGithub } from "react-icons/fa";
 import { connect } from "react-redux";
 import { loginUserService } from "../services/userService";
 import { userLoginSuccess, userLoginFail } from "../store/actions/userActions";
-import axios from "../axios";
+
 function LoginForm({
   onSwitch,
   onLoginSuccess,
@@ -23,9 +24,7 @@ function LoginForm({
 
       if (res.data.errCode === 0) {
         const userInfo = res.data.user;
-
         userLoginSuccess(userInfo);
-
         console.log("User data:", userInfo);
         onLoginSuccess?.();
       } else {
@@ -81,18 +80,52 @@ function LoginForm({
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full h-12 rounded-full bg-white/70 hover:bg-white/50 text-black font-medium"
+          className="w-full h-12 rounded-full bg-white/70 hover:bg-white/50 text-black font-medium transition-all"
         >
           {loading ? "Signing in..." : "Sign In"}
         </button>
       </div>
 
       <div className="flex justify-between text-sm text-white mt-4">
-        <label>
+        <label className="flex items-center cursor-pointer">
           <input type="checkbox" className="mr-2" /> Remember Me
         </label>
         <a href="#" className="hover:underline">
           Forgot password?
+        </a>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3 mt-6 mb-4">
+        <div className="flex-1 h-px bg-white/30"></div>
+        <span className="text-white/70 text-sm">Or continue with</span>
+        <div className="flex-1 h-px bg-white/30"></div>
+      </div>
+
+      {/* Social Login Buttons */}
+      <div className="flex gap-3">
+        <a
+          href="http://localhost:8080/auth/google"
+          className="flex-1 h-12 rounded-lg bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center gap-2 font-medium transition-all shadow-md hover:shadow-lg"
+        >
+          <FaGoogle className="text-xl text-red-500" />
+          <span className="hidden sm:inline">Google</span>
+        </a>
+
+        <a
+          href="http://localhost:8080/auth/facebook"
+          className="flex-1 h-12 rounded-lg bg-[#1877F2] hover:bg-[#0d66d9] text-white flex items-center justify-center gap-2 font-medium transition-all shadow-md hover:shadow-lg"
+        >
+          <FaFacebookF className="text-xl" />
+          <span className="hidden sm:inline">Facebook</span>
+        </a>
+
+        <a
+          href="http://localhost:8080/auth/github"
+          className="flex-1 h-12 rounded-lg bg-[#24292e] hover:bg-[#1a1e22] text-white flex items-center justify-center gap-2 font-medium transition-all shadow-md hover:shadow-lg"
+        >
+          <FaGithub className="text-xl" />
+          <span className="hidden sm:inline">GitHub</span>
         </a>
       </div>
     </div>
