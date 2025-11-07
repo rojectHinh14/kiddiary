@@ -48,7 +48,7 @@ export default function ChatBox({
           },
         ]);
       }
-      
+
       setHistoryLoaded(true);
     } catch (err) {
       console.error("Failed to load chat history:", err);
@@ -88,7 +88,7 @@ export default function ChatBox({
 
       const botReply =
         res.data.reply || "Xin lỗi, mình không nhận được phản hồi.";
-      
+
       // Nếu có kết quả từ database, hiển thị thêm
       const dbResults = res.data.dbResults;
       const totalResults = res.data.totalResults || 0;
@@ -179,7 +179,6 @@ export default function ChatBox({
                   />
                   <div className="bg-gray-100 rounded-xl px-3 py-2 max-w-[90%]">
                     <span className="font-semibold">Bot:</span> {msg.text}
-                    
                     {/* Hiển thị kết quả nếu có */}
                     {msg.total > 0 && msg.results && (
                       <div className="mt-2 text-xs text-gray-600">
@@ -199,7 +198,8 @@ export default function ChatBox({
                               </a>
                             ) : (
                               <span>
-                                📁 {item.albumName} ({item.Media?.length || 0} ảnh)
+                                📁 {item.albumName} ({item.Media?.length || 0}{" "}
+                                ảnh)
                               </span>
                             )}
                           </div>
@@ -226,7 +226,9 @@ export default function ChatBox({
               )
             )}
             {loading && (
-              <div className="text-gray-400 text-sm italic">Đang trả lời...</div>
+              <div className="text-gray-400 text-sm italic">
+                Đang trả lời...
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
