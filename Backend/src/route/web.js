@@ -4,7 +4,9 @@ import userController from "../controllers/userController.js";
 import mediaController from "../controllers/mediaController.js";
 import albumController from "../controllers/albumController.js";
 import childController from "../controllers/childController.js";
+import searchController from "../controllers/searchController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
+
 let router = express.Router();
 let initWebRoutes = (app) => {
   router.get("/about", homeController.getHomePage);
@@ -25,6 +27,10 @@ let initWebRoutes = (app) => {
   //album
   router.post("/api/albums", verifyToken, albumController.createAlbum);
   router.get("/api/albums", verifyToken, albumController.getAllAlbumsByUser);
+
+  //search
+  router.get("/api/search", verifyToken, searchController.searchMedia);
+  
   //add media to album
   router.post(
     "/api/albums/:albumId/media",
