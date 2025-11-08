@@ -7,7 +7,7 @@ import appReducer from "./appReducer";
 import userReducer from "./userReducer";
 import adminReducer from "./adminReducer";
 import vaccinationSlice from "../slice/vaccinationSlice";
-import childrenSlice from "../slice/childrenSlice";
+import children from "../slice/childrenSlice";
 
 const persistCommonConfig = {
   storage,
@@ -31,7 +31,7 @@ const vaccinationPersist = persistReducer(
 );
 const childrenPersist = persistReducer(
   { key: "children", storage, whitelist: ["list", "byId"] },
-  childrenSlice
+  children
 );
 
 const rootReducer = combineReducers({

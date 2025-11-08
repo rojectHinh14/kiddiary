@@ -2,7 +2,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { getAlbumByIdService } from "../../services/albumService";
+import {
+  getAlbumByIdService,
+  removeManyFromAlbumService, // <-- dùng cho xóa 1 hoặc nhiều
+} from "../../services/albumService";
 import AlbumCreateWizard from "./AlbumCreateWizard";
 
 export default function AlbumDetail() {
@@ -15,7 +18,7 @@ export default function AlbumDetail() {
 
   // select mode
   const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState(() => new Set());
+  const [selected, setSelected] = useState(() => new Set()); // Set<string>
 
   const mapResponse = (a) => ({
     ...a,
@@ -38,12 +41,15 @@ export default function AlbumDetail() {
     try {
       const res = await getAlbumByIdService(id);
       if (res.data?.errCode === 0) setAlbum(mapResponse(res.data.data));
+      else setAlbum(null);
     } finally {
       setLoading(false);
     }
   }, [id]);
 
-  useEffect(() => { refetch(); }, [refetch]);
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   // ESC to exit select mode
   useEffect(() => {
@@ -62,39 +68,71 @@ export default function AlbumDetail() {
     await refetch();
   };
 
-  // --- select helpers ---
+  // --- select helpers (dùng string id để so sánh ổn định) ---
   const toggleSelect = (mediaId) => {
+    const key = String(mediaId);
     setSelected((prev) => {
       const n = new Set(prev);
-      if (n.has(mediaId)) n.delete(mediaId);
-      else n.add(mediaId);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
       return n;
     });
   };
 
   const selectAll = () => {
     if (!album?.items?.length) return;
-    setSelected(new Set(album.items.map((x) => x.id)));
+    setSelected(new Set(album.items.map((x) => String(x.id))));
   };
 
   const clearSelect = () => setSelected(new Set());
 
+  // Xóa theo selected (1 hoặc nhiều đều OK)
   const handleRemove = async () => {
     if (selected.size === 0) return;
+
     const confirmText =
       selected.size === 1
         ? "Remove this moment from the album?"
         : `Remove ${selected.size} moments from the album?`;
     if (!confirm(confirmText)) return;
 
-    // API: bạn cần có service này trong albumService
-    // removeItemsFromAlbumService(albumId: string|number, mediaIds: number[])
-    // const res = await removeItemsFromAlbumService(id, Array.from(selected));
-    // if (res?.data?.errCode === 0) {
-    //   await refetch();
-    //   setSelectMode(false);
-    //   setSelected(new Set());
-    // }
+    try {
+      const okIds = await removeManyFromAlbumService(id, Array.from(selected));
+      // cập nhật UI tại chỗ
+      setAlbum((prev) => {
+        if (!prev) return prev;
+        const removed = new Set(okIds.map(String));
+        return {
+          ...prev,
+          items: prev.items.filter((it) => !removed.has(String(it.id))),
+        };
+      });
+      // reset chọn
+      setSelected(new Set());
+      setSelectMode(false);
+    } catch (e) {
+      alert(e?.message || "Remove failed");
+    }
+  };
+
+  // Xóa nhanh 1 item (khi không ở select mode)
+  const removeOne = async (mediaId) => {
+    if (!confirm("Remove this moment from the album?")) return;
+    try {
+      await removeManyFromAlbumService(id, [String(mediaId)]);
+      setAlbum((prev) =>
+        !prev
+          ? prev
+          : {
+              ...prev,
+              items: prev.items.filter(
+                (it) => String(it.id) !== String(mediaId)
+              ),
+            }
+      );
+    } catch (e) {
+      alert(e?.message || "Remove failed");
+    }
   };
 
   /* ---------- UI ---------- */
@@ -137,7 +175,6 @@ export default function AlbumDetail() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6">
-
       {/* Sticky toolbar */}
       <div className="sticky top-0 z-10 -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 backdrop-blur bg-[#FFF9F0]/70 border-b">
         <div className="flex items-center justify-between gap-3">
@@ -234,7 +271,7 @@ export default function AlbumDetail() {
       ) : (
         <div className={`mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 ${selectMode ? "select-none" : ""}`}>
           {album.items.map((it) => {
-            const checked = selected.has(it.id);
+            const checked = selected.has(String(it.id));
             return (
               <figure
                 key={it.id}
@@ -258,8 +295,7 @@ export default function AlbumDetail() {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); toggleSelect(it.id); }}
                       className={`absolute top-3 left-3 h-7 w-7 rounded-full border-2 flex items-center justify-center backdrop-blur
-                        ${checked ? "bg-red-500 border-red-500" : "bg-white/80 border-white"}
-                      `}
+                        ${checked ? "bg-red-500 border-red-500" : "bg-white/80 border-white"}`}
                       title={checked ? "Unselect" : "Select"}
                     >
                       {checked ? (
@@ -269,6 +305,18 @@ export default function AlbumDetail() {
                       ) : (
                         <span className="block h-3 w-3 rounded-full bg-black/20" />
                       )}
+                    </button>
+                  )}
+
+                  {/* nút xoá nhanh 1 item khi KHÔNG ở select mode */}
+                  {!selectMode && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeOne(it.id); }}
+                      className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/80 backdrop-blur border hover:bg-white"
+                      title="Remove this moment"
+                    >
+                      🗑️
                     </button>
                   )}
 
