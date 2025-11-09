@@ -160,7 +160,20 @@ const updateChildVaccineStatus = async (req, res) => {
     });
   }
 };
-
+const getInjectedVaccines = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await childService.getInjectedVaccines(userId);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getInjectedVaccines controller:", error);
+    return res.status(500).json({
+      errCode: 1,
+      message: "Server error fetching injected vaccines",
+      error: error.message,
+    });
+  }
+};
 export default {
   getChildrenByUser,
   addChild,
@@ -169,4 +182,5 @@ export default {
   getVaccinesByChild,
   getChildVaccineDetail,
   updateChildVaccineStatus,
+  getInjectedVaccines,
 };
