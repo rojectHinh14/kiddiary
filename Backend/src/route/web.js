@@ -87,7 +87,7 @@ let initWebRoutes = (app) => {
 
   //search
   router.get("/api/search", verifyToken, searchController.searchMedia);
-  
+
   //add media to album
   router.post(
     "/api/albums/:albumId/media",
@@ -121,6 +121,11 @@ let initWebRoutes = (app) => {
     "/api/children/:childId/vaccines/:vaccineId",
     verifyToken,
     childController.updateChildVaccineStatus
+  );
+  router.get(
+    "/api/vaccines/injected",
+    verifyToken,
+    childController.getInjectedVaccines
   );
 
   return app.use("/", router);

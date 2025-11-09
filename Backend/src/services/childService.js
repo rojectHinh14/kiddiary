@@ -311,7 +311,49 @@ const updateChildVaccineStatus = async (data) => {
     };
   }
 };
+const getInjectedVaccines = async (userId) => {
+  try {
+    const data = await db.ChildVaccine.findAll({
+      where: { status: "injected" },
+      include: [
+        {
+          model: db.ChildProfile,
+          where: { userId },
+          attributes: ["id", "firstName", "lastName", "dob", "genderCode"],
+        },
+        {
+          model: db.Vaccine,
+          attributes: [
+            "id",
+            "vaccineName",
+            "vaccinationType",
+            "diseaseName",
+            "recommendedDate",
+          ],
+        },
+        {
+          model: db.AllCode,
+          as: "statusData",
+          attributes: ["keyMap", "valueVi", "valueEn"],
+        },
+      ],
+      order: [["updateTime", "DESC"]],
+    });
 
+    return {
+      errCode: 0,
+      message: "Get injected vaccines successfully",
+      data,
+    };
+  } catch (error) {
+    console.error("Error in getInjectedVaccines service:", error);
+    return {
+      errCode: 1,
+      message: "Error fetching injected vaccines",
+      error: error.message,
+    };
+  }
+};
 export default {
   addChild,
   getChildrenByUser,
@@ -320,4 +362,5 @@ export default {
   getVaccinesByChild,
   getChildVaccineDetail,
   updateChildVaccineStatus,
+  getInjectedVaccines,
 };
