@@ -58,7 +58,7 @@ function App() {
               element={<VaccinationSchedulePage />}
             />
             <Route
-              path="vaccination/summary"
+              path="vaccination/summary/:childId"
               element={<VaccinationSummaryPage />}
             />
             <Route path="sleep" element={<SleepTrackerPage />} />

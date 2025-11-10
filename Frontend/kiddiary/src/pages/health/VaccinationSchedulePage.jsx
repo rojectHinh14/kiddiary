@@ -269,7 +269,10 @@ const apiStatus = STATUS_TO_API[status] || "not_injected";
           </Typography>
         </div>
         <Button
-          onClick={() => navigate("/home/health/vaccination/summary")}
+  onClick={() => {
+    const id = childIdParam || children[0]?.id; 
+    navigate(`/home/health/vaccination/summary/${id}`);
+  }}
           sx={{
             bgcolor: "#1B9C9E", color: "#FFFBEF", fontWeight: 700, textTransform: "none",
             fontSize: "0.9rem", borderRadius: "999px", px: 2.5, py: 0.7,
