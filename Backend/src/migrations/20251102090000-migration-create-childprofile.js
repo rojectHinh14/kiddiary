@@ -11,10 +11,7 @@ module.exports = {
       userId: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: "Users",
-          key: "id",
-        },
+        references: { model: "Users", key: "id" },
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
@@ -23,8 +20,6 @@ module.exports = {
       dob: { type: Sequelize.DATE, allowNull: false },
       genderCode: { type: Sequelize.STRING },
       avatarUrl: { type: Sequelize.TEXT },
-      weight: { type: Sequelize.FLOAT },
-      height: { type: Sequelize.FLOAT },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

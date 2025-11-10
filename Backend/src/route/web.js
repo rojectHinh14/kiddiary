@@ -127,6 +127,11 @@ let initWebRoutes = (app) => {
     verifyToken,
     childController.getInjectedVaccines
   );
+  router.get(
+    "/api/children/:childId/history",
+    verifyToken,
+    childController.getChildHistory
+  );
 
   return app.use("/", router);
 };
