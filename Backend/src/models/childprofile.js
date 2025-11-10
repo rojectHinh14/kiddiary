@@ -1,5 +1,6 @@
 "use strict";
 const { Model } = require("sequelize");
+
 module.exports = (sequelize, DataTypes) => {
   class ChildProfile extends Model {
     static associate(models) {
@@ -10,6 +11,10 @@ module.exports = (sequelize, DataTypes) => {
       ChildProfile.hasMany(models.ChildVaccine, {
         foreignKey: "childId",
         as: "vaccines",
+      });
+      ChildProfile.hasMany(models.ChildHistory, {
+        foreignKey: "childId",
+        as: "histories",
       });
     }
   }
@@ -22,8 +27,6 @@ module.exports = (sequelize, DataTypes) => {
       dob: { type: DataTypes.DATE, allowNull: false },
       genderCode: { type: DataTypes.STRING },
       avatarUrl: { type: DataTypes.TEXT },
-      weight: { type: DataTypes.FLOAT },
-      height: { type: DataTypes.FLOAT },
     },
     {
       sequelize,
@@ -31,5 +34,6 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "ChildProfiles",
     }
   );
+
   return ChildProfile;
 };

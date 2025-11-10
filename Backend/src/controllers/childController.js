@@ -174,6 +174,19 @@ const getInjectedVaccines = async (req, res) => {
     });
   }
 };
+const getChildHistory = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const result = await childService.getChildHistory(childId);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getChildHistory:", error);
+    return res.status(500).json({
+      errCode: 1,
+      errMessage: "Server error while fetching child history",
+    });
+  }
+};
 export default {
   getChildrenByUser,
   addChild,
@@ -183,4 +196,5 @@ export default {
   getChildVaccineDetail,
   updateChildVaccineStatus,
   getInjectedVaccines,
+  getChildHistory,
 };

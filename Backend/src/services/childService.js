@@ -9,41 +9,43 @@ const addChild = async (data) => {
     if (data.avatarBase64 && data.avatarBase64.startsWith("data:image")) {
       const base64Data = data.avatarBase64.replace(/^data:.+;base64,/, "");
       const uploadDir = path.join(__dirname, "../../uploads");
-
-      if (!fs.existsSync(uploadDir)) {
+      if (!fs.existsSync(uploadDir))
         fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
       const fileName = `child_${Date.now()}_${data.userId}.jpg`;
       const filePath = path.join(uploadDir, fileName);
-
       fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
       avatarUrl = `/uploads/${fileName}`;
     }
 
-    // ✅ Tạo bản ghi trong DB
     const newChild = await db.ChildProfile.create({
       userId: data.userId,
       firstName: data.firstName,
       lastName: data.lastName,
       dob: data.dob,
-      weight: data.weight,
-      height: data.height,
       genderCode: data.genderCode,
-      avatarUrl, // nếu có
+      avatarUrl,
     });
 
-    const vaccines = await db.Vaccine.findAll();
-    if (!vaccines || vaccines.length === 0) {
-      console.warn("⚠️ No vaccine found. Please seed the Vaccine table first.");
-    } else {
-      const childVaccines = vaccines.map((vaccine) => ({
+    //lịch sử tăng trưởng đầu tiên
+    if (data.weight && data.height) {
+      await db.ChildHistory.create({
         childId: newChild.id,
-        vaccineId: vaccine.id,
-        status: "not_injected", // default
-      }));
+        weight: data.weight,
+        height: data.height,
+        date: new Date(),
+      });
+    }
 
-      await db.ChildVaccine.bulkCreate(childVaccines);
+    // Vaccine
+    const vaccines = await db.Vaccine.findAll();
+    if (vaccines.length > 0) {
+      await db.ChildVaccine.bulkCreate(
+        vaccines.map((v) => ({
+          childId: newChild.id,
+          vaccineId: v.id,
+          status: "not_injected",
+        }))
+      );
     }
 
     return {
@@ -65,16 +67,14 @@ const getChildrenByUser = async (userId) => {
   try {
     const children = await db.ChildProfile.findAll({
       where: { userId },
-      attributes: [
-        "id",
-        "firstName",
-        "lastName",
-        "dob",
-        "weight",
-        "height",
-        "genderCode",
-        "avatarUrl",
-        "createdAt",
+      include: [
+        {
+          model: db.ChildHistory,
+          as: "histories",
+          attributes: ["weight", "height", "date"],
+          limit: 1,
+          order: [["date", "DESC"]],
+        },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -99,23 +99,17 @@ const updateChild = async (userId, childId, data) => {
     const child = await db.ChildProfile.findOne({
       where: { id: childId, userId },
     });
-    if (!child) {
+    if (!child)
       return { errCode: 1, errMessage: "Child not found or not owned by user" };
-    }
 
     let avatarUrl = child.avatarUrl;
-
     if (data.avatarBase64 && data.avatarBase64.startsWith("data:image")) {
       const base64Data = data.avatarBase64.replace(/^data:.+;base64,/, "");
       const uploadDir = path.join(__dirname, "../../uploads");
-
-      if (!fs.existsSync(uploadDir)) {
+      if (!fs.existsSync(uploadDir))
         fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
       const fileName = `child_${Date.now()}_${userId}.jpg`;
       const filePath = path.join(uploadDir, fileName);
-
       fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
       avatarUrl = `/uploads/${fileName}`;
     }
@@ -124,11 +118,18 @@ const updateChild = async (userId, childId, data) => {
       firstName: data.firstName ?? child.firstName,
       lastName: data.lastName ?? child.lastName,
       dob: data.dob ?? child.dob,
-      weight: data.weight ?? child.weight,
-      height: data.height ?? child.height,
       genderCode: data.genderCode ?? child.genderCode,
       avatarUrl,
     });
+
+    if (data.weight && data.height) {
+      await db.ChildHistory.create({
+        childId,
+        weight: data.weight,
+        height: data.height,
+        date: new Date(),
+      });
+    }
 
     return {
       errCode: 0,
@@ -146,18 +147,48 @@ const deleteChild = async (userId, childId) => {
     const child = await db.ChildProfile.findOne({
       where: { id: childId, userId },
     });
-    if (!child) {
+    if (!child)
       return { errCode: 1, errMessage: "Child not found or not owned by user" };
-    }
 
     await db.ChildVaccine.destroy({ where: { childId } });
-
+    await db.ChildHistory.destroy({ where: { childId } });
     await db.ChildProfile.destroy({ where: { id: childId } });
 
     return { errCode: 0, errMessage: "Child deleted successfully" };
   } catch (error) {
     console.error("Error in deleteChild:", error);
     return { errCode: 2, errMessage: "Error deleting child" };
+  }
+};
+
+const getChildHistory = async (childId) => {
+  try {
+    const histories = await db.ChildHistory.findAll({
+      where: { childId },
+      order: [["date", "ASC"]],
+      attributes: ["id", "date", "weight", "height", "createdAt"],
+    });
+
+    if (!histories || histories.length === 0) {
+      return {
+        errCode: 1,
+        errMessage: "No growth history found for this child",
+        data: [],
+      };
+    }
+
+    return {
+      errCode: 0,
+      errMessage: "Get child growth history successfully",
+      data: histories,
+    };
+  } catch (error) {
+    console.error("Error in getChildHistory:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error fetching child history",
+      error: error.message,
+    };
   }
 };
 
@@ -363,4 +394,5 @@ export default {
   getChildVaccineDetail,
   updateChildVaccineStatus,
   getInjectedVaccines,
+  getChildHistory,
 };
