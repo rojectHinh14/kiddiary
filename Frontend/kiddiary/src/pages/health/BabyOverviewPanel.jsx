@@ -11,7 +11,6 @@ import {
   Stack,
   Typography,
   Tooltip,
-  useMediaQuery,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -165,7 +164,7 @@ const calculateBMI = (weight, height) => {
 };
 
 const getAvatarSrc = (avatarUrl) => {
-  if (!avatarUrl) return undefined;               
+  if (!avatarUrl) return undefined;
   return avatarUrl.startsWith("http")
     ? avatarUrl
     : `http://localhost:8080${avatarUrl}`;
@@ -232,10 +231,15 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
     dob: new Date(selectedChild.dob).toLocaleDateString("vi-VN"),
     age: calculateAge(selectedChild.dob),
     weeks: calculateWeeks(selectedChild.dob),
-    weight: selectedChild.weight,
-    height: getHeightInCm(selectedChild.height),
-    bmi: calculateBMI(selectedChild.weight, selectedChild.height),
+    weight: selectedChild.histories[0]?.weight,
+    height: getHeightInCm(selectedChild.histories[0]?.height),
+    bmi: calculateBMI(
+      selectedChild.histories[0]?.weight,
+      selectedChild.histories[0]?.height
+    ),
   };
+  console.log("check weight: ", baby.weight);
+  console.log(baby.height);
 
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-white">
@@ -260,7 +264,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
               <div className="flex items-center gap-3 md:gap-4">
                 <Avatar
                   sx={{ width: 44, height: 44 }}
-                  src={getAvatarSrc(selectedChild?.avatarUrl)} 
+                  src={getAvatarSrc(selectedChild?.avatarUrl)}
                 />
                 <div
                   style={{
@@ -341,7 +345,9 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           title="Vaccination Schedule"
           icon={<VaccinesRoundedIcon />}
           bg="#F2CCFF"
-          onClick={() => navigate(`/home/health/vaccination/${selectedChild?.id}`)}
+          onClick={() =>
+            navigate(`/home/health/vaccination/${selectedChild?.id}`)
+          }
         />
         <Tile
           title="Daily Milk Log"
@@ -376,7 +382,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           bg="#CFEBD7"
         />
       </div>
-      <ChatBox/>
+      <ChatBox />
     </div>
   );
 }
