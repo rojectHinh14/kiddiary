@@ -187,6 +187,194 @@ const getChildHistory = async (req, res) => {
     });
   }
 };
+
+const createChildHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId } = req.params;
+    const { date, weight, height } = req.body;
+
+    if (weight == null || height == null) {
+      return res.status(400).json({
+        errCode: 1,
+        errMessage: "Missing required fields (weight, height)",
+      });
+    }
+
+    const result = await childService.createChildHistory(userId, childId, {
+      date,
+      weight,
+      height,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in createChildHistory:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+
+const updateChildHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId, historyId } = req.params;
+    const updateData = req.body; 
+
+    const result = await childService.updateChildHistory(
+      userId,
+      childId,
+      historyId,
+      updateData
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in updateChildHistory:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+
+const deleteChildHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId, historyId } = req.params;
+
+    const result = await childService.deleteChildHistory(
+      userId,
+      childId,
+      historyId
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in deleteChildHistory:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+
+const getChildHistoryDetail = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId, historyId } = req.params;
+
+    const result = await childService.getChildHistoryDetail(
+      userId,
+      childId,
+      historyId
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getChildHistoryDetail:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+const getChildMilkLogs = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId } = req.params;
+    const { date } = req.query; // optional, default: hôm nay
+
+    const result = await childService.getChildMilkLogs(userId, childId, date);
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getChildMilkLogs:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+
+// Tạo milk log mới
+const createChildMilkLog = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId } = req.params;
+    const { feedingAt, amountMl, sourceCode, moodTags, note } = req.body;
+
+    if (!amountMl || !sourceCode) {
+      return res.status(400).json({
+        errCode: 1,
+        errMessage: "Missing required fields (amountMl, sourceCode)",
+      });
+    }
+
+    const result = await childService.createChildMilkLog(userId, childId, {
+      feedingAt,
+      amountMl,
+      sourceCode,
+      moodTags,
+      note,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in createChildMilkLog:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+
+// Cập nhật 1 milk log
+const updateChildMilkLog = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId, milkLogId } = req.params;
+    const updateData = req.body;
+
+    const result = await childService.updateChildMilkLog(
+      userId,
+      childId,
+      milkLogId,
+      updateData
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in updateChildMilkLog:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
+
+// Xoá 1 milk log
+const deleteChildMilkLog = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId, milkLogId } = req.params;
+
+    const result = await childService.deleteChildMilkLog(
+      userId,
+      childId,
+      milkLogId
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in deleteChildMilkLog:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
 export default {
   getChildrenByUser,
   addChild,
@@ -197,4 +385,12 @@ export default {
   updateChildVaccineStatus,
   getInjectedVaccines,
   getChildHistory,
+  createChildHistory,
+  updateChildHistory,
+  deleteChildHistory,
+  getChildHistoryDetail,
+  createChildMilkLog,
+  deleteChildMilkLog,
+  updateChildMilkLog,
+  getChildMilkLogs
 };

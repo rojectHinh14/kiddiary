@@ -1,6 +1,7 @@
 import db from "../models/index.js";
 import path from "path";
 import fs from "fs";
+import { Op, fn, col } from "sequelize";
 
 const addChild = async (data) => {
   try {
@@ -385,6 +386,390 @@ const getInjectedVaccines = async (userId) => {
     };
   }
 };
+
+// Tạo 1 record history mới
+const createChildHistory = async (userId, childId, data) => {
+  try {
+    // 1. check child thuộc user
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    // 2. tạo record
+    const history = await db.ChildHistory.create({
+      childId,
+      weight: data.weight,
+      height: data.height,
+      date: data.date ? new Date(data.date) : new Date(),
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Create child history successfully",
+      data: history,
+    };
+  } catch (error) {
+    console.error("Error in createChildHistory:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error creating child history",
+      error: error.message,
+    };
+  }
+};
+
+const updateChildHistory = async (userId, childId, historyId, data) => {
+  try {
+    // 1. check child thuộc user
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    // 2. tìm history thuộc đúng child
+    const history = await db.ChildHistory.findOne({
+      where: { id: historyId, childId },
+    });
+
+    if (!history) {
+      return {
+        errCode: 1,
+        errMessage: "History not found for this child",
+      };
+    }
+
+    await history.update({
+      weight: data.weight ?? history.weight,
+      height: data.height ?? history.height,
+      date: data.date ? new Date(data.date) : history.date,
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Update child history successfully",
+      data: history,
+    };
+  } catch (error) {
+    console.error("Error in updateChildHistory:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error updating child history",
+      error: error.message,
+    };
+  }
+};
+
+const deleteChildHistory = async (userId, childId, historyId) => {
+  try {
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    const history = await db.ChildHistory.findOne({
+      where: { id: historyId, childId },
+    });
+
+    if (!history) {
+      return {
+        errCode: 1,
+        errMessage: "History not found for this child",
+      };
+    }
+
+    await history.destroy();
+
+    return {
+      errCode: 0,
+      errMessage: "Delete child history successfully",
+    };
+  } catch (error) {
+    console.error("Error in deleteChildHistory:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error deleting child history",
+      error: error.message,
+    };
+  }
+};
+
+const getChildHistoryDetail = async (userId, childId, historyId) => {
+  try {
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    const history = await db.ChildHistory.findOne({
+      where: { id: historyId, childId },
+    });
+
+    if (!history) {
+      return {
+        errCode: 1,
+        errMessage: "History not found for this child",
+      };
+    }
+
+    return {
+      errCode: 0,
+      errMessage: "Get child history detail successfully",
+      data: history,
+    };
+  } catch (error) {
+    console.error("Error in getChildHistoryDetail:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error fetching child history detail",
+      error: error.message,
+    };
+  }
+};
+const getChildMilkLogs = async (userId, childId, dateStr) => {
+  try {
+    // check child thuộc user
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    // ngày cần xem (default: hôm nay)
+    const targetDate = dateStr ? new Date(dateStr) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // tất cả log trong ngày
+    const logs = await db.ChildMilkLog.findAll({
+      where: {
+        childId,
+        feedingAt: {
+          [Op.between]: [startOfDay, endOfDay],
+        },
+      },
+      order: [["feedingAt", "ASC"]],
+    });
+
+    const totalToday = logs.reduce(
+      (sum, l) => sum + (l.amountMl || 0),
+      0
+    );
+
+    // last 7 days summary cho bar chart
+    const start7Days = new Date(endOfDay);
+    start7Days.setDate(start7Days.getDate() - 6); // 7 ngày tính cả hôm nay
+    start7Days.setHours(0, 0, 0, 0);
+
+    const last7DaysRaw = await db.ChildMilkLog.findAll({
+      where: {
+        childId,
+        feedingAt: {
+          [Op.between]: [start7Days, endOfDay],
+        },
+      },
+      attributes: [
+        [fn("DATE", col("feedingAt")), "date"],
+        [fn("SUM", col("amountMl")), "totalMl"],
+      ],
+      group: [fn("DATE", col("feedingAt"))],
+      order: [[fn("DATE", col("feedingAt")), "ASC"]],
+      raw: true,
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Get milk logs successfully",
+      data: {
+        date: startOfDay,
+        totalToday,
+        logs,
+        last7Days: last7DaysRaw, 
+      },
+    };
+  } catch (error) {
+    console.error("Error in getChildMilkLogs:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error fetching milk logs",
+      error: error.message,
+    };
+  }
+};
+const createChildMilkLog = async (userId, childId, data) => {
+  try {
+    const child = await db.ChildProfile.findOne({
+      where: { id: childId, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    const feedingAt = parseFeedingAt(data.feedingAt);
+
+    const log = await db.ChildMilkLog.create({
+      childId,
+      feedingAt,
+      amountMl: data.amountMl,
+      sourceCode: data.sourceCode, 
+      moodTags: data.moodTags ?? null, 
+      note: data.note ?? null,
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Create milk log successfully",
+      data: log,
+    };
+  } catch (error) {
+    console.error("Error in createChildMilkLog:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error creating milk log",
+      error: error.message,
+    };
+  }
+};
+
+const deleteChildMilkLog = async (userId, childId, milkLogId) => {
+  try {
+    const cid = Number(childId);
+    const mid = Number(milkLogId);
+
+    const child = await db.ChildProfile.findOne({
+      where: { id: cid, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    const log = await db.ChildMilkLog.findOne({
+      where: { id: mid, childId: cid },
+    });
+
+    if (!log) {
+      return {
+        errCode: 1,
+        errMessage: "Milk log not found for this child",
+      };
+    }
+
+    await log.destroy();
+
+    return {
+      errCode: 0,
+      errMessage: "Delete milk log successfully",
+    };
+  } catch (error) {
+    console.error("Error in deleteChildMilkLog:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error deleting milk log",
+      error: error.message,
+    };
+  }
+};
+
+
+const updateChildMilkLog = async (userId, childId, milkLogId, data) => {
+  try {
+    const cid = Number(childId);
+    const mid = Number(milkLogId);
+
+    const child = await db.ChildProfile.findOne({
+      where: { id: cid, userId },
+    });
+
+    if (!child) {
+      return {
+        errCode: 1,
+        errMessage: "Child not found or not owned by user",
+      };
+    }
+
+    const log = await db.ChildMilkLog.findOne({
+      where: { id: mid, childId: cid },
+    });
+
+    if (!log) {
+      return {
+        errCode: 1,
+        errMessage: "Milk log not found for this child",
+      };
+    }
+
+    await log.update({
+      feedingAt: data.feedingAt ? new Date(data.feedingAt) : log.feedingAt,
+      amountMl: data.amountMl ?? log.amountMl,
+      sourceCode: data.sourceCode ?? log.sourceCode,
+      moodTags:
+        data.moodTags !== undefined ? data.moodTags : log.moodTags,
+      note: data.note !== undefined ? data.note : log.note,
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Update milk log successfully",
+      data: log,
+    };
+  } catch (error) {
+    console.error("Error in updateChildMilkLog:", error);
+    return {
+      errCode: 2,
+      errMessage: "Error updating milk log",
+      error: error.message,
+    };
+  }
+};
+
+
+
+
+
+const parseFeedingAt = (feedingAt) => {
+  if (feedingAt) return new Date(feedingAt);
+  return new Date(); 
+};
+
 export default {
   addChild,
   getChildrenByUser,
@@ -395,4 +780,12 @@ export default {
   updateChildVaccineStatus,
   getInjectedVaccines,
   getChildHistory,
+  createChildHistory,
+  updateChildHistory,
+  deleteChildHistory,
+  getChildHistoryDetail,
+   getChildMilkLogs,
+  createChildMilkLog,
+  updateChildMilkLog,
+  deleteChildMilkLog,
 };

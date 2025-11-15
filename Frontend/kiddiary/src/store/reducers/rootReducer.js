@@ -8,6 +8,8 @@ import userReducer from "./userReducer";
 import adminReducer from "./adminReducer";
 import vaccinationSlice from "../slice/vaccinationSlice";
 import children from "../slice/childrenSlice";
+import childHistorySlice from "../slice/childHistoorySlice"; 
+import childMilk from "../slice/childMilkSlice"
 
 const persistCommonConfig = {
   storage,
@@ -33,13 +35,32 @@ const childrenPersist = persistReducer(
   { key: "children", storage, whitelist: ["list", "byId"] },
   children
 );
+const childHistoryPersist = persistReducer(
+  {
+    key: "childHistory",
+    storage,
+    whitelist: ["childId", "list"], 
+  },
+  childHistorySlice
+);
+
+const childMilkPersist = persistReducer(
+  {
+    key: "childMilk",
+    storage,
+    whitelist: ["childId", "date", "logs", "totalToday", "last7Days"],
+  },
+  childMilk
+);
 
 const rootReducer = combineReducers({
   user: persistReducer(userPersistConfig, userReducer),
   app: persistReducer(appPersistConfig, appReducer),
   admin: adminReducer,
   vaccination : vaccinationPersist,
-  children : childrenPersist
+ childHistory: childHistoryPersist,
+  children : childrenPersist,
+  childMilk : childMilkPersist
 });
 
 export default rootReducer;

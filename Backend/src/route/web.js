@@ -132,8 +132,29 @@ let initWebRoutes = (app) => {
     verifyToken,
     childController.getChildHistory
   );
+  // child history
+router.post("/api/children/:childId/history", verifyToken, childController.createChildHistory);
+router.get("/api/children/:childId/history/:historyId", verifyToken, childController.getChildHistoryDetail);
+router.put("/api/children/:childId/history/:historyId", verifyToken, childController.updateChildHistory);
+router.delete("/api/children/:childId/history/:historyId", verifyToken, childController.deleteChildHistory);
+
+// child milk log
+router.get("/api/children/:childId/milk-logs",verifyToken, childController.getChildMilkLogs);
+router.post("/api/children/:childId/milk-logs",verifyToken, childController.createChildMilkLog);
+router.put(
+  "/api/children/:childId/milk-logs/:milkLogId",verifyToken,
+  childController.updateChildMilkLog
+);
+router.delete(
+  "/api/children/:childId/milk-logs/:milkLogId",verifyToken,
+  childController.deleteChildMilkLog
+);
+
+
 
   return app.use("/", router);
 };
+
+
 
 module.exports = initWebRoutes;

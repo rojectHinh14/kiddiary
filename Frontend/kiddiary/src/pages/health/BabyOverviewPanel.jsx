@@ -11,7 +11,6 @@ import {
   Stack,
   Typography,
   Tooltip,
-  useMediaQuery,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -353,17 +352,17 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
         <Tile
           title="Daily Milk Log"
           icon={<LocalDrinkRoundedIcon />}
-          onClick={() => navigate("/home/health/milk")}
+          onClick={() => navigate(`/home/health/milk/${selectedChild?.id}`)}
           bg="#CFE6FF"
         />
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <Tile
-          title="Weight, Height"
-          icon={<ScaleRoundedIcon />}
-          bg="#BFEDE1"
-          onClick={() => navigate("/home/health/growth")}
-        />
+        title="Weight, Height"
+        icon={<ScaleRoundedIcon />}
+        bg="#BFEDE1"
+        onClick={() => navigate(`/home/health/growth/${selectedChild?.id}`)}
+      />
         <Tile
           title="Sleep Tracker"
           icon={<BedtimeRoundedIcon />}
