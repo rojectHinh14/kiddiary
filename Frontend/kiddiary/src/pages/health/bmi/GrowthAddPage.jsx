@@ -1,32 +1,70 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Typography,
   TextField,
   Button,
   Chip,
-  IconButton
+  IconButton,
 } from "@mui/material";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import ChildCareRoundedIcon from "@mui/icons-material/ChildCareRounded";
+import { useDispatch } from "react-redux";
+import { createOneHistory } from "../../../store/slice/childHistoorySlice"; // đúng path slice bạn đang dùng
 
-export default function GrowthAddPage({ babyName = "Yến Nhi" }) {
+export default function GrowthAddPage() {
   const navigate = useNavigate();
-  const [date, setDate] = useState("");
+  const dispatch = useDispatch();
+  const { childId } = useParams(); // /home/health/growth/:childId/new
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [date, setDate] = useState(today);
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setError("");
+
     if (!date || !height || !weight) {
-      alert("Please fill all fields");
+      setError("Vui lòng điền đầy đủ ngày, chiều cao và cân nặng");
       return;
     }
 
-    const bmi = (parseFloat(weight) / Math.pow(parseFloat(height) / 100, 2)).toFixed(1);
-    console.log({ date, height, weight, bmi });
+    const h = parseFloat(height);
+    const w = parseFloat(weight);
 
-    navigate("/home/health/growth"); 
+    if (!h || !w) {
+      setError("Chiều cao và cân nặng phải là số hợp lệ");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // Gọi thunk để tạo lịch sử mới
+      await dispatch(
+        createOneHistory({
+          childId,
+          payload: {
+            date,
+            height: h,
+            weight: w,
+          },
+        })
+      ).unwrap();
+
+      // Quay lại trang growth của bé
+      navigate(`/home/health/growth/${childId}`);
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || "Thêm đo lường thất bại");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -49,22 +87,6 @@ export default function GrowthAddPage({ babyName = "Yến Nhi" }) {
         <Typography variant="h5" sx={{ fontWeight: 800, color: "#374151" }}>
           Add New Measurement for
         </Typography>
-        <Chip
-          label={
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{babyName}</span>
-              <ChildCareRoundedIcon className="text-rose-400" />
-            </div>
-          }
-          sx={{
-            bgcolor: "#A9D7D2",
-            color: "#064E3B",
-            borderRadius: "18px",
-            height: 40,
-            px: 1.5,
-            fontWeight: 700,
-          }}
-        />
       </div>
 
       {/* Form */}
@@ -78,13 +100,16 @@ export default function GrowthAddPage({ babyName = "Yến Nhi" }) {
         }}
       >
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontWeight: 700, mb: 1, color: "#111827" }}>Date</Typography>
+          <Typography sx={{ fontWeight: 700, mb: 1, color: "#111827" }}>
+            Date
+          </Typography>
           <TextField
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             fullWidth
             sx={{ bgcolor: "#FFF", borderRadius: 2 }}
+            InputLabelProps={{ shrink: true }}
           />
         </Box>
 
@@ -113,6 +138,12 @@ export default function GrowthAddPage({ babyName = "Yến Nhi" }) {
             sx={{ bgcolor: "#FFF", borderRadius: 2 }}
           />
         </Box>
+
+        {error && (
+          <Typography sx={{ color: "red", mt: 1, fontSize: 14 }}>
+            {error}
+          </Typography>
+        )}
       </Box>
 
       {/* Actions */}
@@ -120,6 +151,7 @@ export default function GrowthAddPage({ babyName = "Yến Nhi" }) {
         <Button
           variant="contained"
           onClick={handleSave}
+          disabled={submitting}
           sx={{
             bgcolor: "#22C55E",
             fontWeight: 700,
@@ -128,11 +160,12 @@ export default function GrowthAddPage({ babyName = "Yến Nhi" }) {
             "&:hover": { bgcolor: "#16A34A" },
           }}
         >
-          Save
+          {submitting ? "Saving..." : "Save"}
         </Button>
         <Button
           variant="contained"
           onClick={() => navigate(-1)}
+          disabled={submitting}
           sx={{
             bgcolor: "#374151",
             color: "#fff",

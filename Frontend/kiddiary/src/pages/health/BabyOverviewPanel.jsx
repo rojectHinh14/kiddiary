@@ -346,7 +346,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
         <Tile
           title="Daily Milk Log"
           icon={<LocalDrinkRoundedIcon />}
-          onClick={() => navigate("/home/health/milk")}
+          onClick={() => navigate(`/home/health/milk/${selectedChild?.id}`)}
           bg="#CFE6FF"
         />
       </div>
@@ -355,7 +355,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
         title="Weight, Height"
         icon={<ScaleRoundedIcon />}
         bg="#BFEDE1"
-        onClick={() => navigate("/home/health/growth")}
+        onClick={() => navigate(`/home/health/growth/${selectedChild?.id}`)}
       />
         <Tile
           title="Sleep Tracker"

@@ -1,10 +1,24 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { deleteChild, getChildrenByUser, updateChild } from "../../services/childService";
+import { deleteChild, getChildrenByUser, updateChild , getChildHistoryService,
+ } from "../../services/childService";
 
 export const loadChildren = createAsyncThunk("children/load", async () => {
   const rows = await getChildrenByUser();
   return rows;
 });
+
+export const loadChildHistory = createAsyncThunk(
+  "childHistory/load",
+  async (childId, { rejectWithValue }) => {
+    try {
+      const rows = await getChildHistoryService(childId);
+      return { childId, rows };
+    } catch (err) {
+      return rejectWithValue(err?.message || "Load child history failed");
+    }
+  }
+);
+
 
 const initialState = {
   list: [],       

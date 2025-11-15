@@ -64,15 +64,18 @@ function App() {
             <Route path="sleep" element={<SleepTrackerPage />} />
             <Route path="sleep/new" element={<SleepAddPage />} />
             <Route path="sleep/history" element={<SleepHistoryPage />} />
-            <Route path="growth" element={<GrowthPage />} />
-            <Route path="growth/new" element={<GrowthAddPage />} />
+            <Route path="growth/:childId" element={<GrowthPage />} />
+          <Route
+          path="growth/:childId/new"
+  element={<GrowthAddPage />}
+/>
             <Route
               path="/home/health/growth/who-standard"
               element={<WhoStandardPage />}
             />
-            <Route path="milk" element={<MilkOverviewPage />} />
-            <Route path="milk/history" element={<MilkHistoryPage />} />
-            <Route path="milk/new" element={<MilkAddPage />} />{" "}
+            <Route path="milk/:childId" element={<MilkOverviewPage />} />
+            <Route path="milk/:childId/history" element={<MilkHistoryPage />} />
+            <Route path="milk/:childId/new" element={<MilkAddPage />} />{" "}
           </Route>
 
           <Route path="profile" element={<Profile />} />
