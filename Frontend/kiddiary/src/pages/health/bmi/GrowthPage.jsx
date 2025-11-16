@@ -35,9 +35,11 @@ export default function GrowthPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const { list: historyRaw, loading, error } = useSelector(
-    (state) => state.childHistory
-  );
+  const {
+    list: historyRaw,
+    loading,
+    error,
+  } = useSelector((state) => state.childHistory);
 
   // local UI state cho dialog
   const [editOpen, setEditOpen] = useState(false);
@@ -83,9 +85,16 @@ export default function GrowthPage() {
   const endIndex = startIndex + PAGE_SIZE;
   const pagedData = filteredData.slice(startIndex, endIndex);
 
-  // ====== latest measurement (bản mới nhất trong toàn bộ history, không phụ thuộc filter) ======
-  const latest = historyData[0] || null;
+  const sortedHistory = [...historyData].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
 
+    return dateB - dateA;
+  });
+
+  const latest = sortedHistory[0] || null;
+
+  // ====== Phần còn lại của code sẽ hoạt động chính xác ======
   const latestDateLabel = latest
     ? new Date(latest.date).toLocaleDateString("en-US", {
         weekday: "long",
@@ -144,9 +153,7 @@ export default function GrowthPage() {
     if (!selected || !childId) return;
 
     try {
-      await dispatch(
-        deleteOneHistory({ childId, id: selected.id })
-      ).unwrap();
+      await dispatch(deleteOneHistory({ childId, id: selected.id })).unwrap();
       setDeleteOpen(false);
     } catch (err) {
       console.error(err);
@@ -176,7 +183,6 @@ export default function GrowthPage() {
           <Typography variant="h5" sx={{ fontWeight: 800, color: "#374151" }}>
             Growth Overview for
           </Typography>
-         
         </div>
 
         <Button
@@ -237,9 +243,7 @@ export default function GrowthPage() {
           }}
         >
           <Box>
-            <MonitorWeightRoundedIcon
-              sx={{ color: "#16837B", fontSize: 30 }}
-            />
+            <MonitorWeightRoundedIcon sx={{ color: "#16837B", fontSize: 30 }} />
             <Typography
               sx={{ fontSize: 36, fontWeight: 800, color: "#16837B" }}
             >
@@ -328,69 +332,73 @@ export default function GrowthPage() {
       )}
       {error && (
         <Typography sx={{ mb: 2, color: "red" }}>
-          {error === "Network Error"
-            ? "Không kết nối được server"
-            : error}
+          {error === "Network Error" ? "Không kết nối được server" : error}
         </Typography>
       )}
 
       {/* History list */}
       <div className="space-y-3">
-        {pagedData.map((item) => (
-          <div
-            key={item.id}
-            className="flex flex-wrap justify-between items-center bg-[#8FC9BF] text-white/90 rounded-xl px-4 py-2 shadow-sm"
-          >
-            <div className="font-medium text-white">
-              <span className="font-semibold">Date:</span>{" "}
-              {new Date(item.date).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </div>
+        {pagedData
+          .slice() // Tạo một bản sao nông (shallow copy) của mảng
+          .reverse() // Đảo ngược thứ tự của bản sao
+          .map((item) => (
+            <div
+              key={item.id}
+              className="flex flex-wrap justify-between items-center bg-[#8FC9BF] text-white/90 rounded-xl px-4 py-2 shadow-sm"
+            >
+              {/* Nội dung item */}
+              <div className="font-medium text-white">
+                <span className="font-semibold">Date:</span>{" "}
+                {new Date(item.date).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </div>
 
-            <div className="text-sm text-white/90">
-              Height:{" "}
-              <span className="font-semibold">{item.height} cm</span> | Weight:{" "}
-              <span className="font-semibold">{item.weight} kg</span> | BMI:{" "}
-              <span className="font-semibold">{item.bmi ?? "-"}</span>
-            </div>
+              <div className="text-sm text-white/90">
+                Height: <span className="font-semibold">{item.height} cm</span>{" "}
+                | Weight:{" "}
+                <span className="font-semibold">{item.weight} kg</span> | BMI:{" "}
+                <span className="font-semibold">{item.bmi ?? "-"}</span>
+              </div>
 
-            <div className="flex gap-2">
-              <Button
-                size="small"
-                onClick={() => handleEdit(item)}
-                sx={{
-                  bgcolor: "#9EDBD1",
-                  color: "#065F46",
-                  fontWeight: 600,
-                  borderRadius: "999px",
-                  px: 2,
-                  textTransform: "none",
-                  "&:hover": { bgcolor: "#BFEDE1" },
-                }}
-              >
-                Edit
-              </Button>
-              <Button
-                size="small"
-                onClick={() => handleDelete(item)}
-                sx={{
-                  bgcolor: "#FF6B6B",
-                  color: "white",
-                  fontWeight: 600,
-                  borderRadius: "999px",
-                  px: 2,
-                  textTransform: "none",
-                  "&:hover": { bgcolor: "#FF5252" },
-                }}
-              >
-                Delete
-              </Button>
+              <div className="flex gap-2">
+                {/* Nút Edit */}
+                <Button
+                  size="small"
+                  onClick={() => handleEdit(item)}
+                  sx={{
+                    bgcolor: "#9EDBD1",
+                    color: "#065F46",
+                    fontWeight: 600,
+                    borderRadius: "999px",
+                    px: 2,
+                    textTransform: "none",
+                    "&:hover": { bgcolor: "#BFEDE1" },
+                  }}
+                >
+                  Edit
+                </Button>
+                {/* Nút Delete */}
+                <Button
+                  size="small"
+                  onClick={() => handleDelete(item)}
+                  sx={{
+                    bgcolor: "#FF6B6B",
+                    color: "white",
+                    fontWeight: 600,
+                    borderRadius: "999px",
+                    px: 2,
+                    textTransform: "none",
+                    "&:hover": { bgcolor: "#FF5252" },
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
         {!loading && filteredData.length === 0 && !error && (
           <Typography sx={{ color: "#6B7280" }}>
@@ -421,18 +429,14 @@ export default function GrowthPage() {
               label="Height (cm)"
               type="number"
               value={form.height}
-              onChange={(e) =>
-                setForm({ ...form, height: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, height: e.target.value })}
               fullWidth
             />
             <TextField
               label="Weight (kg)"
               type="number"
               value={form.weight}
-              onChange={(e) =>
-                setForm({ ...form, weight: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, weight: e.target.value })}
               fullWidth
             />
           </Box>
@@ -455,12 +459,7 @@ export default function GrowthPage() {
         <DialogTitle>Delete Measurement</DialogTitle>
         <DialogContent dividers>
           Bạn có chắc chắn muốn xóa bản ghi ngày{" "}
-          <b>
-            {selected
-              ? new Date(selected.date).toLocaleDateString()
-              : ""}
-          </b>
-          ?
+          <b>{selected ? new Date(selected.date).toLocaleDateString() : ""}</b>?
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
@@ -500,9 +499,7 @@ export default function GrowthPage() {
 
         <button
           disabled={safePage === pageCount}
-          onClick={() =>
-            setPage((p) => Math.min(pageCount, p + 1))
-          }
+          onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
           className={`px-4 py-2 rounded-xl border ${
             safePage === pageCount
               ? "text-gray-400 border-gray-200"
