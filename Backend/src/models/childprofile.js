@@ -16,9 +16,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "childId",
         as: "histories",
       });
-       ChildProfile.hasMany(models.ChildMilkLog, {
+      ChildProfile.hasMany(models.ChildMilkLog, {
         foreignKey: "childId",
         as: "milkLogs",
+      });
+      ChildProfile.hasMany(models.ChildSleepLog, {
+        foreignKey: "childId",
+        as: "sleepLogs",
       });
     }
   }
