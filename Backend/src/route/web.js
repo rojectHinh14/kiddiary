@@ -133,28 +133,68 @@ let initWebRoutes = (app) => {
     childController.getChildHistory
   );
   // child history
-router.post("/api/children/:childId/history", verifyToken, childController.createChildHistory);
-router.get("/api/children/:childId/history/:historyId", verifyToken, childController.getChildHistoryDetail);
-router.put("/api/children/:childId/history/:historyId", verifyToken, childController.updateChildHistory);
-router.delete("/api/children/:childId/history/:historyId", verifyToken, childController.deleteChildHistory);
+  router.post(
+    "/api/children/:childId/history",
+    verifyToken,
+    childController.createChildHistory
+  );
+  router.get(
+    "/api/children/:childId/history/:historyId",
+    verifyToken,
+    childController.getChildHistoryDetail
+  );
+  router.put(
+    "/api/children/:childId/history/:historyId",
+    verifyToken,
+    childController.updateChildHistory
+  );
+  router.delete(
+    "/api/children/:childId/history/:historyId",
+    verifyToken,
+    childController.deleteChildHistory
+  );
 
-// child milk log
-router.get("/api/children/:childId/milk-logs",verifyToken, childController.getChildMilkLogs);
-router.post("/api/children/:childId/milk-logs",verifyToken, childController.createChildMilkLog);
-router.put(
-  "/api/children/:childId/milk-logs/:milkLogId",verifyToken,
-  childController.updateChildMilkLog
-);
-router.delete(
-  "/api/children/:childId/milk-logs/:milkLogId",verifyToken,
-  childController.deleteChildMilkLog
-);
+  // child milk log
+  router.get(
+    "/api/children/:childId/milk-logs",
+    verifyToken,
+    childController.getChildMilkLogs
+  );
+  router.post(
+    "/api/children/:childId/milk-logs",
+    verifyToken,
+    childController.createChildMilkLog
+  );
+  router.put(
+    "/api/children/:childId/milk-logs/:milkLogId",
+    verifyToken,
+    childController.updateChildMilkLog
+  );
+  router.delete(
+    "/api/children/:childId/milk-logs/:milkLogId",
+    verifyToken,
+    childController.deleteChildMilkLog
+  );
+  router.post(
+    "/children/:childId/sleep",
+    verifyToken,
+    childController.createSleep
+  );
+  router.get(
+    "/children/:childId/sleep",
+    verifyToken,
+    childController.getSleepHistory
+  );
 
-
+  router.put("/sleep/:id", verifyToken, childController.updateSleep);
+  router.delete("/sleep/:id", verifyToken, childController.deleteSleep);
+  router.get(
+    "/children/:childId/sleep/week",
+    verifyToken,
+    childController.getSleepWeek
+  );
 
   return app.use("/", router);
 };
-
-
 
 module.exports = initWebRoutes;

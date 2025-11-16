@@ -582,10 +582,7 @@ const getChildMilkLogs = async (userId, childId, dateStr) => {
       order: [["feedingAt", "ASC"]],
     });
 
-    const totalToday = logs.reduce(
-      (sum, l) => sum + (l.amountMl || 0),
-      0
-    );
+    const totalToday = logs.reduce((sum, l) => sum + (l.amountMl || 0), 0);
 
     // last 7 days summary cho bar chart
     const start7Days = new Date(endOfDay);
@@ -615,7 +612,7 @@ const getChildMilkLogs = async (userId, childId, dateStr) => {
         date: startOfDay,
         totalToday,
         logs,
-        last7Days: last7DaysRaw, 
+        last7Days: last7DaysRaw,
       },
     };
   } catch (error) {
@@ -646,8 +643,8 @@ const createChildMilkLog = async (userId, childId, data) => {
       childId,
       feedingAt,
       amountMl: data.amountMl,
-      sourceCode: data.sourceCode, 
-      moodTags: data.moodTags ?? null, 
+      sourceCode: data.sourceCode,
+      moodTags: data.moodTags ?? null,
       note: data.note ?? null,
     });
 
@@ -709,7 +706,6 @@ const deleteChildMilkLog = async (userId, childId, milkLogId) => {
   }
 };
 
-
 const updateChildMilkLog = async (userId, childId, milkLogId, data) => {
   try {
     const cid = Number(childId);
@@ -741,8 +737,7 @@ const updateChildMilkLog = async (userId, childId, milkLogId, data) => {
       feedingAt: data.feedingAt ? new Date(data.feedingAt) : log.feedingAt,
       amountMl: data.amountMl ?? log.amountMl,
       sourceCode: data.sourceCode ?? log.sourceCode,
-      moodTags:
-        data.moodTags !== undefined ? data.moodTags : log.moodTags,
+      moodTags: data.moodTags !== undefined ? data.moodTags : log.moodTags,
       note: data.note !== undefined ? data.note : log.note,
     });
 
@@ -761,16 +756,69 @@ const updateChildMilkLog = async (userId, childId, milkLogId, data) => {
   }
 };
 
-
-
-
-
 const parseFeedingAt = (feedingAt) => {
   if (feedingAt) return new Date(feedingAt);
-  return new Date(); 
+  return new Date();
+};
+
+export const createSleepLog = async (childId, data) => {
+  // tự tính duration nếu có endTime
+  let duration = null;
+  if (data.endTime) {
+    const start = new Date(data.startTime);
+    const end = new Date(data.endTime);
+    duration = Math.floor((end - start) / 60000); // phút
+  }
+
+  return await db.ChildSleepLog.create({
+    childId,
+    sleepDate: data.sleepDate,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    duration,
+    quality: data.quality,
+    notes: data.notes,
+  });
+};
+
+export const getSleepLogs = async (childId, from, to) => {
+  const where = { childId };
+
+  if (from && to) {
+    where.sleepDate = { [db.Sequelize.Op.between]: [from, to] };
+  }
+
+  return await db.ChildSleepLog.findAll({
+    where,
+    order: [["startTime", "ASC"]],
+  });
+};
+
+export const updateSleepLog = async (id, data) => {
+  const log = await db.ChildSleepLog.findByPk(id);
+  if (!log) return null;
+
+  if (data.endTime) {
+    const start = new Date(data.startTime || log.startTime);
+    const end = new Date(data.endTime);
+    data.duration = Math.floor((end - start) / 60000);
+  }
+
+  await log.update(data);
+  return log;
+};
+
+export const deleteSleepLog = async (id) => {
+  return await db.ChildSleepLog.destroy({
+    where: { id },
+  });
 };
 
 export default {
+  createSleepLog,
+  getSleepLogs,
+  updateSleepLog,
+  deleteSleepLog,
   addChild,
   getChildrenByUser,
   updateChild,
@@ -784,7 +832,7 @@ export default {
   updateChildHistory,
   deleteChildHistory,
   getChildHistoryDetail,
-   getChildMilkLogs,
+  getChildMilkLogs,
   createChildMilkLog,
   updateChildMilkLog,
   deleteChildMilkLog,

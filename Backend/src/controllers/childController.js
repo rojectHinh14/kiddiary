@@ -1,5 +1,5 @@
 import childService from "../services/childService.js";
-
+import { startOfWeek, endOfWeek } from "../helpers/weekHelper.js";
 const getChildrenByUser = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -221,7 +221,7 @@ const updateChildHistory = async (req, res) => {
   try {
     const userId = req.user.id;
     const { childId, historyId } = req.params;
-    const updateData = req.body; 
+    const updateData = req.body;
 
     const result = await childService.updateChildHistory(
       userId,
@@ -375,6 +375,84 @@ const deleteChildMilkLog = async (req, res) => {
     });
   }
 };
+
+export const createSleep = async (req, res) => {
+  try {
+    const childId = req.params.childId;
+    const log = await childService.createSleepLog(childId, req.body);
+    return res.status(201).json(log);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getSleepHistory = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { from, to } = req.query;
+
+    const logs = await childService.getSleepLogs(childId, from, to);
+    return res.status(200).json(logs);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+export const updateSleep = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await childService.updateSleepLog(id, req.body);
+    if (!updated)
+      return res.status(404).json({ message: "Sleep log not found" });
+
+    return res.status(200).json(updated);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+
+export const deleteSleep = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await childService.deleteSleepLog(id);
+    if (!result)
+      return res.status(404).json({ message: "Sleep log not found" });
+
+    return res.status(200).json({ message: "Deleted successfully" });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
+export const getSleepWeek = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const { week, date } = req.query;
+
+    // Ưu tiên date, nếu có date thì tính tuần theo date
+    let targetDate = new Date();
+
+    if (date) {
+      targetDate = new Date(date + "T00:00:00");
+    } else if (week) {
+      // format week: 2025-03-2  => yyyy-mm-weekNumber
+      const [year, month, weekNum] = week.split("-");
+      targetDate = new Date(year, parseInt(month) - 1, 1 + (weekNum - 1) * 7);
+    }
+
+    const from = startOfWeek(targetDate);
+    const to = endOfWeek(targetDate);
+
+    const logs = await childService.getSleepLogs(childId, from, to);
+
+    return res.status(200).json({
+      weekStart: from,
+      weekEnd: to,
+      logs,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};
 export default {
   getChildrenByUser,
   addChild,
@@ -392,5 +470,10 @@ export default {
   createChildMilkLog,
   deleteChildMilkLog,
   updateChildMilkLog,
-  getChildMilkLogs
+  getChildMilkLogs,
+  createSleep,
+  getSleepHistory,
+  updateSleep,
+  deleteSleep,
+  getSleepWeek,
 };
