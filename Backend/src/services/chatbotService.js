@@ -72,39 +72,38 @@ const analyzeIntent = (prompt) => {
 
 /**
  * Tìm kiếm media theo keywords, description, aiTags, date/month/year
- * Logic: OR (chỉ cần thỏa mãn 1 điều kiện)
+ * Logic: AND (phải thỏa mãn TẤT CẢ các điều kiện)
  */
 const searchMedia = async (userId, keywords, dateFilter = null, monthFilter = null, yearFilter = null) => {
   try {
     const whereClause = { userId };
+    const andConditions = [];
 
-    // Build search conditions với OR logic
-    const orConditions = [];
-
-    // 1. Search by keywords trong description hoặc aiTags
+    // 1. Search by keywords trong description HOẶC aiTags
+    // (Các keywords phải match, nhưng có thể ở description hoặc aiTags)
     if (keywords && keywords.length > 0) {
-      const keywordConditions = [];
       keywords.forEach((keyword) => {
-        keywordConditions.push(
-          { description: { [Op.like]: `%${keyword}%` } },
-          // Search in aiTags JSON field
-          db.Sequelize.where(
-            db.Sequelize.fn("JSON_SEARCH", db.Sequelize.col("aiTags"), "one", `%${keyword}%`),
-            { [Op.ne]: null }
-          )
-        );
+        andConditions.push({
+          [Op.or]: [
+            { description: { [Op.like]: `%${keyword}%` } },
+            // Search in aiTags JSON field
+            db.Sequelize.where(
+              db.Sequelize.fn("JSON_SEARCH", db.Sequelize.col("aiTags"), "one", `%${keyword}%`),
+              { [Op.ne]: null }
+            )
+          ]
+        });
       });
-      orConditions.push(...keywordConditions);
     }
 
-    // 2. Search by exact date
+    // 2. Search by exact date (AND với keywords)
     if (dateFilter) {
-      orConditions.push({ date: dateFilter });
+      andConditions.push({ date: dateFilter });
     }
 
-    // 3. Search by month (bất kỳ năm nào)
+    // 3. Search by month (AND với keywords)
     if (monthFilter) {
-      orConditions.push(
+      andConditions.push(
         db.Sequelize.where(
           db.Sequelize.fn("MONTH", db.Sequelize.col("date")),
           parseInt(monthFilter)
@@ -112,9 +111,9 @@ const searchMedia = async (userId, keywords, dateFilter = null, monthFilter = nu
       );
     }
 
-    // 4. Search by year
+    // 4. Search by year (AND với keywords)
     if (yearFilter) {
-      orConditions.push(
+      andConditions.push(
         db.Sequelize.where(
           db.Sequelize.fn("YEAR", db.Sequelize.col("date")),
           parseInt(yearFilter)
@@ -122,9 +121,9 @@ const searchMedia = async (userId, keywords, dateFilter = null, monthFilter = nu
       );
     }
 
-    // Nếu có điều kiện search, dùng OR
-    if (orConditions.length > 0) {
-      whereClause[Op.or] = orConditions;
+    // Áp dụng tất cả điều kiện với AND logic
+    if (andConditions.length > 0) {
+      whereClause[Op.and] = andConditions;
     }
 
     const mediaList = await db.Media.findAll({
