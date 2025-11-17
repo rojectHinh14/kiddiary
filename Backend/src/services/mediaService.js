@@ -2,8 +2,18 @@ import fs from "fs";
 import path from "path";
 import db from "../models/index.js";
 import { Op } from "sequelize";
+import aiTaggingService from "./aiTaggingService";
+
 const createMedia = async ({ userId, fileBase64, description, date }) => {
   try {
+    //AI Service calling
+    console.log("Calling AI service to generate tags...");
+    const aiResult = await aiTaggingService.generateTags(fileBase64, null);
+
+    // Lấy kết quả từ AI
+    const aiTagsArray = aiResult.tags || []; // Mảng các tag
+
+    //Old logic
     const base64Data = fileBase64.replace(/^data:.+;base64,/, "");
     const uploadDir = path.join(__dirname, "../../uploads");
 
@@ -22,6 +32,7 @@ const createMedia = async ({ userId, fileBase64, description, date }) => {
       userId,
       fileUrl,
       description: description || "",
+      aiTags: aiTagsArray.join(", "), // Lưu dưới dạng chuỗi phân tách bằng dấu phẩy
       fileTypeCode: "IMG",
       date: date || new Date().toISOString().split("T")[0],
     });
