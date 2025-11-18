@@ -1,384 +1,454 @@
 import React, { useEffect, useState } from "react";
 import {
-  Card, CardContent, IconButton, Typography, Button, Dialog,
-  DialogContent, DialogActions, TextField, Chip, MenuItem, Select,
-  InputLabel, FormControl, Box, CircularProgress,
+  Card,
+  CardContent,
+  IconButton,
+  Typography,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Box,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import VaccinesRoundedIcon from "@mui/icons-material/VaccinesRounded";
 import CircleIcon from "@mui/icons-material/Circle";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import axios from "../../axios"; // file axios đã cấu hình baseURL
 
-import {
-  loadVaccinesForAllChildren,
-  saveVaccineStatus,
-} from "../../store/slice/vaccinationSlice";
 import { loadChildren } from "../../store/slice/childrenSlice";
-import { fromApiStatus, getChildVaccineDetail } from "../../services/healthService"; // << thêm import
 
-// UI status meta
-const STATUS_META = {
-  NONE:    { label: "Update",       color: "#F871A0", text: "#fff" },
-  NOT_YET: { label: "Not injected", color: "#E5E7EB", text: "#111827" },
-  DONE:    { label: "Injected",     color: "#34D399", text: "#064E3B" },
-  SKIPPED: { label: "Skipped",      color: "#FCD34D", text: "#78350F" },
+// ==================== SẮP XẾP THEO TUỔI ====================
+const parseAgeToMonths = (ageStr) => {
+  if (!ageStr) return Infinity;
+  const s = ageStr.trim().toLowerCase();
+  if (s.includes("birth") || s.includes("24h") || s.includes("giờ")) return 0;
+
+  const match = s.match(
+    /(\d+)\s*(-|–|to)?\s*(\d+)?\s*(month|months|tháng|year|years|năm|tuổi)/i
+  );
+  if (!match) return Infinity;
+
+  let num = parseInt(match[1], 10);
+  const unit = match[4].toLowerCase();
+  if (unit.includes("year") || unit.includes("năm") || unit.includes("tuổi"))
+    num *= 12;
+  return num;
 };
 
-// Map UI -> API
-const STATUS_TO_API = {
-  NOT_YET: "not_injected",
-  DONE: "injected",
-  SKIPPED: "skipped",
+const sortByRecommendedAge = (vaccines) => {
+  return [...vaccines].sort((a, b) => {
+    const monthsA = parseAgeToMonths(a.dose.recommendedAge);
+    const monthsB = parseAgeToMonths(b.dose.recommendedAge);
+    if (monthsA !== monthsB) return monthsA - monthsB;
+    return a.dose.doseNumber - b.dose.doseNumber;
+  });
 };
 
-function UpdateDialog({ open, onClose, data, onSave, loading }) {
-  const [status, setStatus] = useState(data?.status || "NOT_YET");
-  const [date, setDate]     = useState(data?.updateTime?.slice(0, 10) || "");
-  const [note, setNote]     = useState(data?.note || "");
+// ==================== TRẠNG THÁI ====================
+const STATUS_CONFIG = {
+  not_injected: { label: "Not Injected", color: "#F871A0", text: "#fff" },
+  injected: { label: "Injected", color: "#34D399", text: "#fff" },
+  skipped: { label: "Skipped", color: "#FCD34D", text: "#78350F" },
+};
+
+// ==================== DIALOG CẬP NHẬT ====================
+function UpdateDialog({ open, onClose, data, onSave, saving }) {
+  const [status, setStatus] = useState("not_injected");
+  const [date, setDate] = useState("");
+  const [note, setNote] = useState("");
 
   useEffect(() => {
-    setStatus(data?.status || "NOT_YET");
-    setDate(data?.updateTime?.slice(0, 10) || "");
-    setNote(data?.note || "");
+    if (data) {
+      setStatus(data.status || "not_injected");
+      setDate(data.injectedDate ? data.injectedDate.slice(0, 10) : "");
+      setNote(data.note || "");
+    }
   }, [data]);
 
   if (!open) return null;
 
-  const statusOptions = [
-    { key: "NOT_YET", label: STATUS_META.NOT_YET.label },
-    { key: "DONE",    label: STATUS_META.DONE.label },
-    { key: "SKIPPED", label: STATUS_META.SKIPPED.label },
-  ];
-
   const Row = ({ label, children }) => (
-    <Box sx={{ display: "grid", gridTemplateColumns: "220px 1fr", borderBottom: "1px solid #D1D5DB" }}>
-      <Box sx={{ bgcolor: "#E3EBF6", color: "#1F2937", fontWeight: 700, fontSize: 14, px: 2, py: 1.25, borderRight: "1px solid #D1D5DB" }}>
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: "220px 1fr",
+        borderBottom: "1px solid #e5e7eb",
+      }}
+    >
+      <Box
+        sx={{
+          bgcolor: "#f1f5f9",
+          fontWeight: 700,
+          px: 3,
+          py: 2,
+          borderRight: "1px solid #e5e7eb",
+        }}
+      >
         {label}
       </Box>
-      <Box sx={{ px: 2, py: 1.25 }}>{children}</Box>
+      <Box sx={{ px: 3, py: 2 }}>{children}</Box>
     </Box>
   );
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2, overflow: "hidden" } }}>
-      <Box sx={{ position: "sticky", top: 0, zIndex: 1, bgcolor: "#fff", borderBottom: "1px solid #E5E7EB", px: 3, py: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 800, color: "#111827" }}>
-          Vaccination update — {data?.childName} • {data?.vaccine?.name || data?.vaccine?.vaccineName || "-"}
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <Box
+        sx={{
+          p: 3,
+          borderBottom: "1px solid #e5e7eb",
+          bgcolor: "white",
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+        }}
+      >
+        <Typography variant="h6" fontWeight={800}>
+          Update Vaccination Status
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {data?.childName} • {data?.vaccineName} (Dose {data?.doseNumber})
         </Typography>
       </Box>
 
-      {loading ? (
-        <Box sx={{ p: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <DialogContent sx={{ p: 0, maxHeight: "80vh" }}>
-          <Row label="Vaccine">
-            <Typography sx={{ fontWeight: 700 }}>
-              {data?.vaccine?.name || data?.vaccine?.vaccineName || "-"}
+      <DialogContent sx={{ p: 0 }}>
+        <Row label="Vaccine">
+          <div>
+            <Typography fontWeight={700}>{data?.vaccineName}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {data?.diseaseName}
             </Typography>
-          </Row>
+          </div>
+        </Row>
+        <Row label="Dose">Dose {data?.doseNumber}</Row>
+        <Row label="Recommended Age">{data?.recommendedAge}</Row>
+        <Row label="Description">
+          <Typography sx={{ whiteSpace: "pre-wrap", fontSize: "0.95rem" }}>
+            {data?.doseDescription || "-"}
+          </Typography>
+        </Row>
+        <Row label="Status">
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={status}
+                label="Status"
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <MenuItem value="not_injected">Not Injected</MenuItem>
+                <MenuItem value="injected">Injected</MenuItem>
+                <MenuItem value="skipped">Skipped</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              size="small"
+              type="date"
+              label="Injection Date"
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                inputProps: { max: new Date().toISOString().split("T")[0] },
+              }}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </Box>
+        </Row>
+        <Row label="Note">
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            placeholder="Add note (clinic, reaction, etc.)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </Row>
+      </DialogContent>
 
-          <Row label="Child">
-            <Typography>{data?.childName}</Typography>
-          </Row>
-
-          <Row label="Status">
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              <FormControl size="small" sx={{ minWidth: 220 }}>
-                <InputLabel id="vax-status">Status</InputLabel>
-                <Select
-                  labelId="vax-status"
-                  label="Status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  {statusOptions.map((opt) => (
-                    <MenuItem key={opt.key} value={opt.key}>{opt.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <TextField
-                size="small"
-                type="date"
-                label="Date"
-                InputLabelProps={{ shrink: true }}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </Box>
-          </Row>
-
-          <Row label="Note">
-            <TextField fullWidth multiline minRows={3} placeholder="Add your note" value={note} onChange={(e) => setNote(e.target.value)} />
-          </Row>
-
-                <Row label="Description">
-            <Typography sx={{ whiteSpace: "pre-wrap" }}>
-              {data?.vaccine?.description || "-"}
-            </Typography>
-          </Row>
-          <Row label="About">
-            <Typography sx={{ whiteSpace: "pre-wrap" }}>
-              {data?.vaccine?.about || "-"}
-            </Typography>
-          </Row>
-          <Row label="Recommended date">
-            <Typography>{data?.vaccine?.recommendedDate || "-"}</Typography>
-          </Row>
-          <Row label="Required?">
-            <Typography>{data?.vaccine?.required ? "Yes" : "No"}</Typography>
-          </Row>
-
-
-          {data?.vaccine?.symptoms && (
-            <Row label="Symptoms / Side Effects">
-              <Typography sx={{ whiteSpace: "pre-wrap" }}>{data?.vaccine?.symptoms}</Typography>
-            </Row>
-          )}
-        </DialogContent>
-      )}
-
-      <DialogActions sx={{ px: 2.5, py: 1.75, borderTop: "1px solid #E5E7EB" }}>
-        <Button onClick={onClose} variant="text" sx={{ fontWeight: 700, color: "#374151" }}>CANCEL</Button>
+      <DialogActions sx={{ p: 3, borderTop: "1px solid #e5e7eb", gap: 2 }}>
+        <Button onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
         <Button
-          onClick={() => onSave({ status, date, note })}
           variant="contained"
-          sx={{ bgcolor: "#22C55E", fontWeight: 800, px: 3, "&:hover": { bgcolor: "#16A34A" } }}
-          disabled={loading}
+          color="success"
+          onClick={() =>
+            onSave({
+              status,
+              date: date ? `${date}T12:00:00.000Z` : null,
+              note,
+            })
+          }
+          disabled={saving}
+          startIcon={saving && <CircularProgress size={16} />}
         >
-          SAVE
+          {saving ? "Saving..." : "Save Changes"}
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
 
+// ==================== MAIN COMPONENT ====================
 export default function VaccinationSchedulePage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { childId: childIdParam } = useParams();
+  const { childId } = useParams();
 
-  const children = useSelector((s) => s.children?.list || []);
-  const vaccinesByChildId = useSelector((s) => s.vaccination?.vaccinesByChildId || {});
-  const loading = useSelector((s) => s.vaccination?.loading || s.children?.loading);
-
+  const children = useSelector((state) => state.children?.list || []);
+  const [vaccines, setVaccines] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [dialogLoading, setDialogLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
-  // Load children nếu state đang trống
+  // Load children list
   useEffect(() => {
-    if (!children?.length) dispatch(loadChildren());
-  }, [children?.length, dispatch]);
+    if (!children.length) dispatch(loadChildren());
+  }, [dispatch, children.length]);
 
-  // Khi có children -> load vaccines (1 bé nếu có childIdParam, ngược lại tất cả)
-  useEffect(() => {
-    if (!children?.length) return;
-    const id = childIdParam ? Number(childIdParam) : null;
-    if (id) {
-      const child = children.find((c) => Number(c.id) === id);
-      if (child) dispatch(loadVaccinesForAllChildren([child]));
-    } else {
-      dispatch(loadVaccinesForAllChildren(children));
+  // Load vaccines for child
+  const loadVaccines = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`/api/children/${childId}/vaccines`);
+      if (res.data.errCode === 0) {
+        const sorted = sortByRecommendedAge(res.data.data);
+        setVaccines(sorted);
+      }
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: "Failed to load vaccines",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [children, childIdParam, dispatch]);
-
-const openUpdate = async (child, row) => {
-  setDialogLoading(true);
-  try {
-    let vid = row?.vaccine?.id;
-    if (Array.isArray(vid)) vid = vid[0];
-    const cid = Number(child?.id);
-    vid = Number(vid);
-    if (!cid || !vid) return;
-
-    const detail = await getChildVaccineDetail(cid, vid);
-    const v = detail?.Vaccine || {};
-
-    setSelected({
-      childId: cid,
-      childName: `${child.firstName || ""} ${child.lastName || ""}`.trim() || "Child",
-      vaccineId: vid,
-
-      // Dùng mapper để ra UI status
-      status: fromApiStatus(detail?.status ?? row?.status),
-      updateTime: detail?.updateTime || row?.updateTime || null,
-      note: detail?.note ?? row?.note ?? "",
-
-      vaccine: {
-        id: Number(v?.id),
-        name: v?.vaccineName || row?.vaccine?.name || "",
-        diseaseName: v?.diseaseName || row?.vaccine?.diseaseName || "",
-        description: v?.description ?? row?.vaccine?.description ?? "",
-        about: v?.about ?? "",
-        required: Boolean(v?.required),
-        recommendedDate: v?.recommendedDate ?? "",
-        symptoms: v?.symptoms ?? "",
-      },
-    });
-  } catch (e) {
-    console.error("openUpdate error", e);
-  } finally {
-    setDialogLoading(false);
-  }
-};
-
-
-  const handleSave = ({ status, date, note }) => {
-    if (!selected) return;
-const apiStatus = STATUS_TO_API[status] || "not_injected";
-    dispatch(
-      saveVaccineStatus({
-        childId: selected.childId,
-        vaccineId: selected.vaccineId,
-        payload: { status: apiStatus, updateTime: date || null, note },
-      })
-    );
-    setSelected(null);
   };
 
-  const title = childIdParam
-    ? `Vaccination schedule — Child #${childIdParam}`
-    : "Vaccination schedule (All children)";
+  useEffect(() => {
+    if (childId) loadVaccines();
+  }, [childId]);
 
-  const childrenToRender = childIdParam
-    ? children.filter((c) => String(c.id) === String(childIdParam))
-    : children;
+  const child = children.find((c) => String(c.id) === String(childId));
+
+  const openUpdate = (item) => {
+    const { dose, status, injectedDate, note } = item;
+    const vaccine = dose.vaccine;
+
+    setSelected({
+      recordId: item.id, // id của bảng child_vaccines (cần để update)
+      vaccineDoseId: dose.id, // vaccineDoseId trong bảng dose
+      childName: `${child?.firstName} ${child?.lastName}`.trim(),
+      vaccineName: vaccine.vaccineName,
+      diseaseName: vaccine.diseaseName,
+      status,
+      injectedDate,
+      note: note || "",
+      doseNumber: dose.doseNumber,
+      recommendedAge: dose.recommendedAge,
+      doseDescription: dose.doseDescription,
+    });
+  };
+
+  // GỌI API LƯU THẬT
+  const handleSave = async ({ status, date, note }) => {
+    if (!selected) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        childId: Number(childId),
+        vaccineDoseId: selected.vaccineDoseId,
+        status,
+        injectedDate: date,
+        note: note || null,
+      };
+
+      const res = await axios.put("/api/vaccines/dose-status", payload);
+
+      if (res.data.errCode === 0) {
+        // Cập nhật local state
+        setVaccines((prev) =>
+          prev.map((v) =>
+            v.dose.id === selected.vaccineDoseId
+              ? { ...v, status, injectedDate: date, note }
+              : v
+          )
+        );
+
+        setSnackbar({
+          open: true,
+          message: "Vaccination status updated successfully!",
+          severity: "success",
+        });
+        setSelected(null);
+      }
+    } catch (err) {
+      const msg =
+        err.response?.data?.errMessage || "Failed to update. Please try again.";
+      setSnackbar({ open: true, message: msg, severity: "error" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!child)
+    return (
+      <Typography align="center" py={10}>
+        Child not found
+      </Typography>
+    );
 
   return (
-    <div className="py-4 space-y-6">
+    <div className="max-w-6xl mx-auto py-6 px-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
           <IconButton
             onClick={() => navigate(-1)}
-            sx={{
-              width: 40, height: 40, borderRadius: "999px", background: "#FFF",
-              boxShadow: "0 2px 6px rgba(0,0,0,.08)", "&:hover": { background: "#FFF" },
-            }}
+            sx={{ bgcolor: "white", boxShadow: 2 }}
           >
-            <ArrowBackIosNewRoundedIcon fontSize="small" />
+            <ArrowBackIosNewRoundedIcon />
           </IconButton>
-          <div className="w-10 h-10 rounded-full bg-[#FFE7F7] flex items-center justify-center shadow-sm">
-            <VaccinesRoundedIcon />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
+              <VaccinesRoundedIcon sx={{ color: "#ec4899" }} />
+            </div>
+            <div>
+              <Typography variant="h5" fontWeight={800}>
+                Vaccination Schedule
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {child.firstName} {child.lastName} • DOB:{" "}
+                {child.dob
+                  ? new Date(child.dob).toLocaleDateString("en-GB")
+                  : "-"}
+              </Typography>
+            </div>
           </div>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: "#374151" }}>
-            {title}
-          </Typography>
         </div>
+
         <Button
-  onClick={() => {
-    const id = childIdParam || children[0]?.id; 
-    navigate(`/home/health/vaccination/summary/${id}`);
-  }}
-          sx={{
-            bgcolor: "#1B9C9E", color: "#FFFBEF", fontWeight: 700, textTransform: "none",
-            fontSize: "0.9rem", borderRadius: "999px", px: 2.5, py: 0.7,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.08)", transition: "all 0.2s ease",
-            "&:hover": { bgcolor: "#138C8E", boxShadow: "0 3px 8px rgba(0,0,0,0.12)" },
-          }}
+          variant="contained"
+          sx={{ borderRadius: 28, px: 4, fontWeight: 700 }}
+          onClick={() =>
+            navigate(`/home/health/vaccination/summary/${childId}`)
+          }
         >
-          Summary
+          View Summary
         </Button>
       </div>
 
+      {/* Loading */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <CircularProgress />
-        </div>
-      ) : null}
+        <Box display="flex" justifyContent="center" py={12}>
+          <CircularProgress size={60} />
+        </Box>
+      ) : (
+        <Card sx={{ borderRadius: 4, overflow: "hidden", boxShadow: 3 }}>
+          <CardContent sx={{ p: 0 }}>
+            <div className="grid grid-cols-12 font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 py-4 text-center">
+              <div className="col-span-4">Vaccine</div>
+              <div className="col-span-2">Dose</div>
+              <div className="col-span-4">Recommended Age</div>
+              <div className="col-span-2">Status</div>
+            </div>
 
-      {/* Mỗi bé một card */}
-      {childrenToRender.map((child) => {
-        const rows = vaccinesByChildId[child.id] || [];
-        return (
-          <Card
-            key={child.id}
-            elevation={0}
-            sx={{
-              borderRadius: 4, overflow: "hidden", border: "1px solid #E5E7EB",
-              boxShadow: "0 6px 14px rgba(0,0,0,0.06)",
-            }}
-          >
-            <CardContent sx={{ p: 0 }}>
-              {/* Header child */}
-              <div className="flex items-center justify-between px-4 py-3 bg-[#F8FAFC] border-b border-[#E5E7EB]">
-                <Typography sx={{ fontWeight: 800, color: "#0F172A" }}>
-                  {(child.firstName || "") + " " + (child.lastName || "")}
-                </Typography>
-                <Typography variant="body2" sx={{ color: "#334155" }}>
-                  DOB: {child.dob ? new Date(child.dob).toLocaleDateString() : "-"}
-                </Typography>
-              </div>
+            {vaccines.map((item, idx) => {
+              const { dose, status } = item;
+              const vaccine = dose.vaccine;
+              const config =
+                STATUS_CONFIG[status] || STATUS_CONFIG.not_injected;
 
-              {/* Header row */}
-              <div className="grid grid-cols-3 bg-[#38BDF8] text-white font-semibold text-center py-3">
-                <div>Vaccine</div>
-                <div>Description</div>
-                <div>Status</div>
-              </div>
-
-              {/* Body */}
-              {rows.length === 0 ? (
-                <div className="p-4 text-center text-slate-500">No vaccines found</div>
-              ) : (
-                rows.map((r, idx) => {
-
-                  const uiStatus = STATUS_META[r.status] ? r.status : fromApiStatus(r.status);
-                  const meta = STATUS_META[uiStatus] || STATUS_META.NONE; 
-                  return (
-                    <div
-                      key={`${child.id}-${r.vaccine?.id}-${idx}`}
-                      className={`grid grid-cols-3 text-sm ${idx % 2 === 0 ? "bg-[#F0F9FF]" : "bg-white"} border-t border-[#E5E7EB]`}
-                    >
-                      <div className="p-4 text-center font-medium text-slate-700 border-r border-[#E5E7EB]">
-                        {r.vaccine?.name}
-                        <div className="text-xs text-slate-500">{r.vaccine?.diseaseName}</div>
-                      </div>
-
-                      <div className="p-4 text-slate-700 whitespace-pre-wrap border-r border-[#E5E7EB]">
-                        {r.vaccine?.description || "-"}
-                      </div>
-
-                      <div className="p-4 flex items-center justify-center">
-                        <Button
-                          variant="contained"
-                          onClick={() => openUpdate(child, r)}
-                          sx={{
-                            bgcolor: meta.color || "#E5E7EB",
-                            color:   meta.text  || "#111827",
-                            textTransform: "none",
-                            fontWeight: 700,
-                            "&:hover": { filter: "brightness(0.95)" },
-                          }}
-                          startIcon={
-                            r.status && r.status !== "NONE" ? (
-                              <CircleIcon sx={{ fontSize: 10, color: meta.text }} />
-                            ) : null
-                          }
-                        >
-                          {meta.label}
-                        </Button>
-                      </div>
+              return (
+                <div
+                  key={item.id}
+                  className={`grid grid-cols-12 text-sm border-t ${
+                    idx % 2 === 0 ? "bg-blue-50" : "bg-white"
+                  } hover:bg-blue-100 transition`}
+                >
+                  <div className="col-span-4 p-4 border-r">
+                    <div className="font-semibold">{vaccine.vaccineName}</div>
+                    <div className="text-xs text-gray-600">
+                      {vaccine.diseaseName}
                     </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+                  </div>
+                  <div className="col-span-2 p-4 border-r text-center font-medium">
+                    Dose {dose.doseNumber}
+                  </div>
+                  <div className="col-span-4 p-4 border-r">
+                    <div className="font-medium">{dose.recommendedAge}</div>
+                    <div className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">
+                      {dose.doseDescription}
+                    </div>
+                  </div>
+                  <div className="col-span-2 p-4 flex justify-center">
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => openUpdate(item)}
+                      sx={{
+                        bgcolor: config.color,
+                        color: config.text,
+                        fontWeight: 700,
+                        textTransform: "none",
+                        minWidth: 120,
+                        "&:hover": { filter: "brightness(0.9)" },
+                      }}
+                      startIcon={
+                        status !== "not_injected" ? (
+                          <CircleIcon sx={{ fontSize: 10 }} />
+                        ) : null
+                      }
+                    >
+                      {config.label}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Update dialog */}
+      {/* Dialog & Snackbar */}
       <UpdateDialog
-        open={!!selected || dialogLoading}
-        loading={dialogLoading}
-        onClose={() => setSelected(null)}
+        open={!!selected}
+        onClose={() => !saving && setSelected(null)}
         data={selected}
         onSave={handleSave}
+        saving={saving}
       />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

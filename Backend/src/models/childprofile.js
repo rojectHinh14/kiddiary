@@ -8,9 +8,9 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "userId",
         as: "parent",
       });
-      ChildProfile.hasMany(models.ChildVaccine, {
+      ChildProfile.hasMany(models.ChildVaccineDose, {
         foreignKey: "childId",
-        as: "vaccines",
+        as: "vaccineDoses",
       });
       ChildProfile.hasMany(models.ChildHistory, {
         foreignKey: "childId",

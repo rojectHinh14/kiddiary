@@ -38,12 +38,13 @@ const addChild = async (data) => {
     }
 
     // Vaccine
-    const vaccines = await db.Vaccine.findAll();
-    if (vaccines.length > 0) {
-      await db.ChildVaccine.bulkCreate(
-        vaccines.map((v) => ({
+    const doses = await db.VaccineDose.findAll();
+
+    if (doses.length > 0) {
+      await db.ChildVaccineDose.bulkCreate(
+        doses.map((dose) => ({
           childId: newChild.id,
-          vaccineId: v.id,
+          vaccineDoseId: dose.id,
           status: "not_injected",
         }))
       );
@@ -151,8 +152,10 @@ const deleteChild = async (userId, childId) => {
     if (!child)
       return { errCode: 1, errMessage: "Child not found or not owned by user" };
 
-    await db.ChildVaccine.destroy({ where: { childId } });
+    await db.ChildVaccineDose.destroy({ where: { childId } });
     await db.ChildHistory.destroy({ where: { childId } });
+    await db.ChildMilkLog.destroy({ where: { childId } });
+    await db.ChildSleepLog.destroy({ where: { childId } });
     await db.ChildProfile.destroy({ where: { id: childId } });
 
     return { errCode: 0, errMessage: "Child deleted successfully" };
@@ -195,17 +198,24 @@ const getChildHistory = async (childId) => {
 
 const getVaccinesByChild = async (childId) => {
   try {
-    const vaccines = await db.ChildVaccine.findAll({
+    const vaccineDoses = await db.ChildVaccineDose.findAll({
       where: { childId },
       include: [
         {
-          model: db.Vaccine,
-          attributes: [
-            "id",
-            "vaccineName",
-            "vaccinationType",
-            "diseaseName",
-            "description",
+          model: db.VaccineDose,
+          as: "dose",
+          include: [
+            {
+              model: db.Vaccine,
+              as: "vaccine",
+              attributes: [
+                "id",
+                "vaccineName",
+                "vaccinationType",
+                "diseaseName",
+                "description",
+              ],
+            },
           ],
         },
         {
@@ -214,11 +224,14 @@ const getVaccinesByChild = async (childId) => {
           attributes: ["keyMap", "valueEn", "valueVi"],
         },
       ],
-      attributes: ["id", "status", "updateTime", "note"],
-      order: [[db.Vaccine, "id", "ASC"]],
+      attributes: ["id", "status", "injectedDate", "note"],
+      order: [
+        [{ model: db.VaccineDose, as: "dose" }, "vaccineId", "ASC"],
+        [{ model: db.VaccineDose, as: "dose" }, "doseNumber", "ASC"],
+      ],
     });
 
-    if (!vaccines || vaccines.length === 0) {
+    if (!vaccineDoses || vaccineDoses.length === 0) {
       return {
         errCode: 0,
         errMessage: "No vaccines found for this child",
@@ -229,7 +242,7 @@ const getVaccinesByChild = async (childId) => {
     return {
       errCode: 0,
       errMessage: "Get child vaccines successfully",
-      data: vaccines,
+      data: vaccineDoses,
     };
   } catch (error) {
     console.error("Error in getVaccinesByChild:", error);
@@ -240,23 +253,30 @@ const getVaccinesByChild = async (childId) => {
     };
   }
 };
-const getChildVaccineDetail = async (childId, vaccineId) => {
+const getChildVaccineDetail = async (childId, vaccineDoseId) => {
   try {
-    const record = await db.ChildVaccine.findOne({
-      where: { childId, vaccineId },
+    const record = await db.ChildVaccineDose.findOne({
+      where: { childId, vaccineDoseId },
       include: [
         {
-          model: db.Vaccine,
-          attributes: [
-            "id",
-            "vaccineName",
-            "vaccinationType",
-            "diseaseName",
-            "description",
-            "about",
-            "required",
-            "recommendedDate",
-            "symptoms",
+          model: db.VaccineDose,
+          as: "dose",
+          include: [
+            {
+              model: db.Vaccine,
+              as: "vaccine",
+              attributes: [
+                "id",
+                "vaccineName",
+                "vaccinationType",
+                "diseaseName",
+                "description",
+                "about",
+                "required",
+                "recommendedDate",
+                "symptoms",
+              ],
+            },
           ],
         },
         {
@@ -268,9 +288,9 @@ const getChildVaccineDetail = async (childId, vaccineId) => {
       attributes: [
         "id",
         "childId",
-        "vaccineId",
+        "vaccineDoseId",
         "status",
-        "updateTime",
+        "injectedDate",
         "note",
       ],
     });
@@ -278,7 +298,7 @@ const getChildVaccineDetail = async (childId, vaccineId) => {
     if (!record) {
       return {
         errCode: 1,
-        errMessage: "No vaccine found for this childId and vaccineId",
+        errMessage: "No vaccine dose found for this child",
       };
     }
 
@@ -299,7 +319,7 @@ const getChildVaccineDetail = async (childId, vaccineId) => {
 
 const updateChildVaccineStatus = async (data) => {
   try {
-    const { childId, vaccineId, status, updateTime, note } = data;
+    const { childId, vaccineDoseId, status, injectedDate, note } = data;
 
     const validStatus = await db.AllCode.findOne({
       where: { keyMap: status, type: "VACCINE_STATUS" },
@@ -312,19 +332,19 @@ const updateChildVaccineStatus = async (data) => {
       };
     }
 
-    const record = await db.ChildVaccine.findOne({
-      where: { childId, vaccineId },
+    const record = await db.ChildVaccineDose.findOne({
+      where: { childId, vaccineDoseId },
     });
 
     if (!record) {
       return {
         errCode: 1,
-        errMessage: "Vaccine record not found for this child",
+        errMessage: "Vaccine dose record not found for this child",
       };
     }
 
     record.status = status;
-    record.updateTime = updateTime || new Date();
+    if (injectedDate) record.injectedDate = injectedDate;
     if (note !== undefined) record.note = note;
 
     await record.save();
@@ -345,7 +365,7 @@ const updateChildVaccineStatus = async (data) => {
 };
 const getInjectedVaccines = async (userId) => {
   try {
-    const data = await db.ChildVaccine.findAll({
+    const data = await db.ChildVaccineDose.findAll({
       where: { status: "injected" },
       include: [
         {
@@ -354,13 +374,20 @@ const getInjectedVaccines = async (userId) => {
           attributes: ["id", "firstName", "lastName", "dob", "genderCode"],
         },
         {
-          model: db.Vaccine,
-          attributes: [
-            "id",
-            "vaccineName",
-            "vaccinationType",
-            "diseaseName",
-            "recommendedDate",
+          model: db.VaccineDose,
+          as: "dose",
+          include: [
+            {
+              model: db.Vaccine,
+              as: "vaccine",
+              attributes: [
+                "id",
+                "vaccineName",
+                "vaccinationType",
+                "diseaseName",
+                "recommendedDate",
+              ],
+            },
           ],
         },
         {
@@ -369,7 +396,7 @@ const getInjectedVaccines = async (userId) => {
           attributes: ["keyMap", "valueVi", "valueEn"],
         },
       ],
-      order: [["updateTime", "DESC"]],
+      order: [["injectedDate", "DESC"]],
     });
 
     return {
@@ -814,7 +841,235 @@ export const deleteSleepLog = async (id) => {
   });
 };
 
+//update status mũi tiêm:
+const updateVaccineDoseStatus = async (data) => {
+  try {
+    const { childId, vaccineDoseId, status, injectedDate, note } = data;
+
+    // Validate status
+    const validStatus = await db.AllCode.findOne({
+      where: { keyMap: status, type: "VACCINE_STATUS" },
+    });
+
+    if (!validStatus) {
+      return {
+        errCode: 2,
+        errMessage: `Invalid vaccine status: ${status}`,
+      };
+    }
+
+    // Find the vaccine dose record
+    const record = await db.ChildVaccineDose.findOne({
+      where: { childId, vaccineDoseId },
+    });
+
+    if (!record) {
+      return {
+        errCode: 1,
+        errMessage: "Vaccine dose record not found",
+      };
+    }
+
+    // Update record
+    await record.update({
+      status,
+      injectedDate: status === "injected" ? injectedDate || new Date() : null,
+      note: note !== undefined ? note : record.note,
+    });
+
+    return {
+      errCode: 0,
+      errMessage: "Update vaccine dose status successfully",
+      data: record,
+    };
+  } catch (error) {
+    console.error("Error in updateVaccineDoseStatus:", error);
+    return {
+      errCode: 1,
+      errMessage: "Error updating vaccine dose status",
+      error: error.message,
+    };
+  }
+};
+//lấy trạng thái các mũi tiêm theo vaccine:
+const getVaccineDosesByVaccine = async (childId) => {
+  try {
+    const vaccineDoses = await db.ChildVaccineDose.findAll({
+      where: { childId },
+      include: [
+        {
+          model: db.VaccineDose,
+          as: "dose",
+          include: [
+            {
+              model: db.Vaccine,
+              as: "vaccine",
+              attributes: [
+                "id",
+                "vaccineName",
+                "vaccinationType",
+                "diseaseName",
+                "description",
+                "required",
+              ],
+            },
+          ],
+        },
+        {
+          model: db.AllCode,
+          as: "statusData",
+          attributes: ["keyMap", "valueEn", "valueVi"],
+        },
+      ],
+      attributes: ["id", "status", "injectedDate", "note"],
+      order: [
+        [
+          { model: db.VaccineDose, as: "dose" },
+          { model: db.Vaccine, as: "vaccine" },
+          "id",
+          "ASC",
+        ],
+        [{ model: db.VaccineDose, as: "dose" }, "doseNumber", "ASC"],
+      ],
+    });
+
+    // Group by vaccine
+    const groupedByVaccine = vaccineDoses.reduce((acc, item) => {
+      const vaccineId = item.dose.vaccine.id;
+      const vaccineName = item.dose.vaccine.vaccineName;
+
+      if (!acc[vaccineId]) {
+        acc[vaccineId] = {
+          vaccineId,
+          vaccineName,
+          vaccinationType: item.dose.vaccine.vaccinationType,
+          diseaseName: item.dose.vaccine.diseaseName,
+          description: item.dose.vaccine.description,
+          required: item.dose.vaccine.required,
+          doses: [],
+        };
+      }
+
+      acc[vaccineId].doses.push({
+        id: item.id,
+        doseId: item.dose.id,
+        doseNumber: item.dose.doseNumber,
+        recommendedAge: item.dose.recommendedAge,
+        doseDescription: item.dose.doseDescription,
+        status: item.status,
+        statusText:
+          item.statusData?.valueVi || item.statusData?.valueEn || item.status,
+        injectedDate: item.injectedDate,
+        note: item.note,
+      });
+
+      return acc;
+    }, {});
+
+    const result = Object.values(groupedByVaccine);
+
+    return {
+      errCode: 0,
+      errMessage: "Get vaccine doses by vaccine successfully",
+      data: result,
+    };
+  } catch (error) {
+    console.error("Error in getVaccineDosesByVaccine:", error);
+    return {
+      errCode: 1,
+      errMessage: "Error fetching vaccine doses",
+      error: error.message,
+    };
+  }
+};
+//lấy chi tiết 1 vaccine với tất cả mũi tiêm:
+const getVaccineWithDoses = async (childId, vaccineId) => {
+  try {
+    // Get vaccine info
+    const vaccine = await db.Vaccine.findByPk(vaccineId, {
+      include: [
+        {
+          model: db.VaccineDose,
+          as: "doses",
+          attributes: ["id", "doseNumber", "recommendedAge", "doseDescription"],
+          order: [["doseNumber", "ASC"]],
+        },
+      ],
+    });
+
+    if (!vaccine) {
+      return {
+        errCode: 1,
+        errMessage: "Vaccine not found",
+      };
+    }
+
+    // Get child's vaccine doses status
+    const childDoses = await db.ChildVaccineDose.findAll({
+      where: { childId },
+      include: [
+        {
+          model: db.VaccineDose,
+          as: "dose",
+          where: { vaccineId },
+          attributes: ["id", "doseNumber"],
+        },
+      ],
+      include: [
+        {
+          model: db.AllCode,
+          as: "statusData",
+          attributes: ["keyMap", "valueEn", "valueVi"],
+        },
+      ],
+    });
+
+    // Map doses with status
+    const dosesWithStatus = vaccine.doses.map((dose) => {
+      const childDose = childDoses.find((cd) => cd.dose.id === dose.id);
+      return {
+        ...dose.toJSON(),
+        status: childDose?.status || "not_injected",
+        statusText:
+          childDose?.statusData?.valueVi ||
+          childDose?.statusData?.valueEn ||
+          "not_injected",
+        injectedDate: childDose?.injectedDate || null,
+        note: childDose?.note || null,
+        childDoseId: childDose?.id || null,
+      };
+    });
+
+    const result = {
+      vaccineId: vaccine.id,
+      vaccineName: vaccine.vaccineName,
+      vaccinationType: vaccine.vaccinationType,
+      diseaseName: vaccine.diseaseName,
+      description: vaccine.description,
+      about: vaccine.about,
+      required: vaccine.required,
+      symptoms: vaccine.symptoms,
+      doses: dosesWithStatus,
+    };
+
+    return {
+      errCode: 0,
+      errMessage: "Get vaccine with doses successfully",
+      data: result,
+    };
+  } catch (error) {
+    console.error("Error in getVaccineWithDoses:", error);
+    return {
+      errCode: 1,
+      errMessage: "Error fetching vaccine details",
+      error: error.message,
+    };
+  }
+};
 export default {
+  getVaccineWithDoses,
+  getVaccineDosesByVaccine,
+  updateVaccineDoseStatus,
   createSleepLog,
   getSleepLogs,
   updateSleepLog,

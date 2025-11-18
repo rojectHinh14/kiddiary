@@ -193,6 +193,23 @@ let initWebRoutes = (app) => {
     verifyToken,
     childController.getSleepWeek
   );
+  // Cập nhật trạng thái mũi tiêm
+  router.put(
+    "/api/vaccines/dose-status",
+    childController.updateVaccineDoseStatus
+  );
+
+  // Lấy tất cả vaccine với trạng thái các mũi tiêm của trẻ
+  router.get(
+    "/api/vaccines/child/:childId",
+    childController.getVaccineDosesByVaccine
+  );
+
+  // Lấy chi tiết 1 vaccine với tất cả mũi tiêm
+  router.get(
+    "/child/:childId/vaccine/:vaccineId",
+    childController.getVaccineWithDoses
+  );
 
   return app.use("/", router);
 };

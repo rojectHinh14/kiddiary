@@ -11,7 +11,7 @@ export const getChildrenByUser = async () => {
   if (data?.errCode > 0) {
     throw new Error(data.errMessage || "Load children failed");
   }
-  return data.data || []; 
+  return data.data || [];
 };
 
 export const getChildHistoryService = async (childId) => {
@@ -30,7 +30,11 @@ export const createChildHistoryService = async (childId, payload) => {
   }
   return d.data;
 };
-export const updateChildHistoryService = async (childId, historyId, payload) => {
+export const updateChildHistoryService = async (
+  childId,
+  historyId,
+  payload
+) => {
   const res = await axios.put(
     `/api/children/${childId}/history/${historyId}`,
     payload
@@ -64,8 +68,16 @@ export const deleteChild = async (id) => {
   const res = await axios.delete(`/api/children/${id}`);
   const d = res?.data;
   if (!d || d.errCode > 0) throw new Error(d?.errMessage || "Delete failed");
-  return true; 
+  return true;
 };
 
- export const updateChild = (id, payload) =>
+export const updateChild = (id, payload) =>
   axios.put(`/api/children/${id}`, payload);
+
+export const getChildVaccines = async (childId) => {
+  const response = await axios.get(`/api/children/${childId}/vaccines`);
+  if (response.data.errCode === 0) {
+    return response.data.data;
+  }
+  throw new Error(response.data.errMessage || "Lỗi khi lấy dữ liệu vaccine");
+};
