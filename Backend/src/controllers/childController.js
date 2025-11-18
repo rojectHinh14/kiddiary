@@ -109,6 +109,69 @@ const getVaccinesByChild = async (req, res) => {
   }
 };
 
+const updateVaccineDoseStatus = async (req, res) => {
+  try {
+    const data = req.body;
+    const result = await childService.updateVaccineDoseStatus(data);
+
+    if (result.errCode !== 0) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in updateVaccineDoseStatus controller:", error);
+    return res.status(500).json({
+      errCode: 1,
+      errMessage: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+const getVaccineDosesByVaccine = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const result = await childService.getVaccineDosesByVaccine(Number(childId));
+
+    if (result.errCode !== 0) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getVaccineDosesByVaccine controller:", error);
+    return res.status(500).json({
+      errCode: 1,
+      errMessage: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+const getVaccineWithDoses = async (req, res) => {
+  try {
+    const { childId, vaccineId } = req.params;
+    const result = await childService.getVaccineWithDoses(
+      Number(childId),
+      Number(vaccineId)
+    );
+
+    if (result.errCode !== 0) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getVaccineWithDoses controller:", error);
+    return res.status(500).json({
+      errCode: 1,
+      errMessage: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 const getChildVaccineDetail = async (req, res) => {
   try {
     const { childId, vaccineId } = req.params;
@@ -506,4 +569,7 @@ export default {
   updateSleep,
   deleteSleep,
   getSleepWeek,
+  updateVaccineDoseStatus,
+  getVaccineDosesByVaccine,
+  getVaccineWithDoses,
 };
