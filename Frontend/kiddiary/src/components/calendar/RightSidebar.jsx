@@ -158,10 +158,6 @@ export default function RightSidebar({ onAdd }) {
           </div>
         )}
       </div>
-
-      <button className="w-full text-[#ff4b4b] font-medium underline underline-offset-4">
-        photo albums
-      </button>
     </aside>
   );
 }

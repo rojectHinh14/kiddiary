@@ -453,12 +453,42 @@ export const getSleepWeek = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
+const getChildMilkLogsByDateRange = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId } = req.params;
+    const { fromDate, toDate } = req.query; 
+
+    if (!fromDate || !toDate) {
+      return res.status(400).json({
+        errCode: 1,
+        errMessage: "Missing required query parameters: fromDate and toDate",
+      });
+    }
+
+    const result = await childService.getChildMilkLogsByDateRange(
+      userId, 
+      childId, 
+      fromDate, 
+      toDate
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getChildMilkLogsByDateRange:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
 export default {
   getChildrenByUser,
   addChild,
   updateChild,
   deleteChild,
   getVaccinesByChild,
+  getChildMilkLogsByDateRange,
   getChildVaccineDetail,
   updateChildVaccineStatus,
   getInjectedVaccines,

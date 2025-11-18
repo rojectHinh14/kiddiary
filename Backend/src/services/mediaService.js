@@ -114,4 +114,54 @@ const searchByAiTags = async (userId, keyword) => {
     return { errCode: 1, message: "Error searching media" };
   }
 };
-export default { createMedia, getAllMediaByUser, deleteMedia, searchByAiTags };
+
+
+const updateMedia = async (userId, mediaId, { fileBase64, description, date }) => {
+  try {
+    const media = await db.Media.findOne({ where: { id: mediaId, userId } });
+    if (!media) {
+      return { errCode: 1, message: "Media not found or not authorized" };
+    }
+
+    if (fileBase64) {
+      const base64Data = fileBase64.replace(/^data:.+;base64,/, "");
+      const uploadDir = path.join(__dirname, "../../uploads");
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const newFileName = `media_${Date.now()}_${userId}.jpg`;
+      const newFilePath = path.join(uploadDir, newFileName);
+
+      fs.writeFileSync(newFilePath, Buffer.from(base64Data, "base64"));
+
+      const oldFilePath = path.join(__dirname, "../../", media.fileUrl);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+
+      media.fileUrl = `/uploads/${newFileName}`;
+    }
+
+    if (typeof description !== "undefined") {
+      media.description = description;
+    }
+    if (date) {
+      media.date = date;
+    }
+
+    await media.save();
+
+    return { errCode: 0, message: "Update success", data: media };
+  } catch (err) {
+    console.error("Error updating media:", err);
+    return {
+      errCode: 2,
+      message: "Error while updating media",
+      error: err.message,
+    };
+  }
+};
+
+export default { createMedia, getAllMediaByUser, deleteMedia, searchByAiTags,updateMedia  };

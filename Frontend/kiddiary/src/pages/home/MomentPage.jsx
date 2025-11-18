@@ -8,8 +8,8 @@ import EditMomentDialog from "../../components/home/EditMomentDialog";
 import {
   uploadMediaService,
   getAllMediaByUserService,
-  deleteMedia,          // <-- dùng hàm delete
-  // updateMediaService,
+  deleteMedia,
+  updateMediaService,
 } from "../../services/mediaService";
 
 export default function MomentsPage() {
@@ -24,12 +24,19 @@ export default function MomentsPage() {
       const res = await getAllMediaByUserService();
       if (res.data?.errCode === 0) {
         const mapped = res.data.data
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          // ❗ Sort theo ngày ĐĂNG (createdAt) mới nhất
+          .slice()
+          .sort((a, b) => {
+            const aTime = new Date(a.createdAt || a.date).getTime();
+            const bTime = new Date(b.createdAt || b.date).getTime();
+            return bTime - aTime; // mới nhất lên đầu
+          })
           .map((m) => ({
             id: String(m.id),
             username:
               `${m.User?.firstName || ""} ${m.User?.lastName || ""}`.trim() ||
               "Unknown",
+            // dateRaw vẫn là ngày moment (field date) để dùng cho edit
             dateRaw: m.date,
             date: format(new Date(m.date), "dd MMM yyyy"),
             caption: m.description || "",
@@ -49,59 +56,103 @@ export default function MomentsPage() {
     }
   }, []);
 
-  useEffect(() => { fetchPosts(); }, [fetchPosts]);
-
-  const handleCreate = useCallback(async ({ files, caption, date, people }) => {
-    if (!files?.length) return;
-    const form = new FormData();
-    form.append("file", files[0]);
-    form.append("description", caption || "");
-    form.append("date", format(date || new Date(), "yyyy-MM-dd"));
-    if (people) form.append("people", people);
-    const res = await uploadMediaService(form);
-    if (res.data?.errCode === 0) await fetchPosts();
-    setOpenDialog(false);
+  useEffect(() => {
+    fetchPosts();
   }, [fetchPosts]);
 
-  // === Edit ===
-  const handleEditOpen = useCallback((id) => {
-    const p = posts.find((x) => x.id === String(id));
-    if (!p) return;
-    setEditing({
-      id: p.id,
-      caption: p.caption,
-      image: p.image,
-      date: new Date(p.dateRaw),
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
     });
-  }, [posts]);
+  };
 
-  // const handleUpdate = useCallback(async ({ id, caption, file, date }) => {
-  //   const form = new FormData();
-  //   form.append("id", id);
-  //   form.append("description", caption || "");
-  //   if (date) form.append("date", format(date, "yyyy-MM-dd"));
-  //   if (file) form.append("file", file);
-  //   const res = await updateMediaService(form);
-  //   if (res.data?.errCode === 0) {
-  //     await fetchPosts();
-  //     setEditing(null);
-  //   }
-  // }, [fetchPosts]);
+  const handleCreate = useCallback(
+    async ({ files, caption, date }) => {
+      if (!files?.length) return;
 
-  // === Delete (optimistic) ===
-  const handleDelete = useCallback(async (id) => {
-    console.log("[MomentsPage] handleDelete CALLED with id =", id);
-    const prev = posts;
-    setPosts((list) => list.filter((x) => String(x.id) !== String(id)));
-    try {
-      const data = await deleteMedia(id);
-      console.log("[MomentsPage] delete response =", data);
-      if (data?.errCode !== 0) throw new Error(data?.message || "Delete failed");
-    } catch (e) {
-      console.error("[MomentsPage] delete error:", e);
-      setPosts(prev); // hoàn tác nếu lỗi
-    }
-  }, [posts]);
+      const fileBase64 = await fileToBase64(files[0]);
+
+      const payload = {
+        fileBase64: fileBase64,
+        description: caption || "",
+        date: format(date || new Date(), "yyyy-MM-dd"),
+      };
+
+      const res = await uploadMediaService(payload);
+
+      if (res.data?.errCode === 0) await fetchPosts();
+      setOpenDialog(false);
+    },
+    [fetchPosts]
+  );
+
+  // === Edit ===
+  const handleEdit = useCallback(
+    async ({ id, caption, file, date }) => {
+      const payload = {
+        id,
+        description: caption || "",
+        date: format(date || new Date(), "yyyy-MM-dd"),
+      };
+
+      if (file) {
+        console.log("New file detected, converting to Base64...");
+        const fileBase64 = await fileToBase64(file);
+        payload.fileBase64 = fileBase64;
+      }
+
+      try {
+        const res = await updateMediaService(payload);
+
+        if (res.data?.errCode === 0) {
+          console.log("Edit successful, fetching new posts...");
+          setEditing(null);
+          await fetchPosts();
+        } else {
+          alert(`Edit failed: ${res.data?.message || "Server error"}`);
+        }
+      } catch (error) {
+        console.error("Error during media update:", error);
+        alert("An unexpected error occurred during update.");
+      }
+    },
+    [fetchPosts]
+  );
+
+  const handleEditOpen = useCallback(
+    (id) => {
+      const p = posts.find((x) => x.id === String(id));
+      if (!p) return;
+      setEditing({
+        id: p.id,
+        caption: p.caption,
+        image: p.image,
+        date: new Date(p.dateRaw),
+      });
+    },
+    [posts]
+  );
+
+  const handleDelete = useCallback(
+    async (id) => {
+      console.log("[MomentsPage] handleDelete CALLED with id =", id);
+      const prev = posts;
+      setPosts((list) => list.filter((x) => String(x.id) !== String(id)));
+      try {
+        const data = await deleteMedia(id);
+        console.log("[MomentsPage] delete response =", data);
+        if (data?.errCode !== 0)
+          throw new Error(data?.message || "Delete failed");
+      } catch (e) {
+        console.error("[MomentsPage] delete error:", e);
+        setPosts(prev); // hoàn tác nếu lỗi
+      }
+    },
+    [posts]
+  );
 
   return (
     <div className="max-w-[1040px] mx-auto">
@@ -113,7 +164,7 @@ export default function MomentsPage() {
           className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-medium shadow-[0_2px_0_0_rgba(0,0,0,0.06)] hover:bg-black/5"
         >
           <PenSquare size={16} />
-          New post
+          New Moment
         </button>
       </div>
 
@@ -121,7 +172,9 @@ export default function MomentsPage() {
         <div className="mt-6 space-y-6">{/* skeleton như cũ */}</div>
       ) : posts.length === 0 ? (
         <div className="h-64 grid place-items-center text-gray-500">
-          No posts yet. Click <span className="mx-1 font-medium">New post</span> to share your first memory.
+          No posts yet. Click{" "}
+          <span className="mx-1 font-medium">New post</span> to share your first
+          memory.
         </div>
       ) : (
         <div className="mt-6 space-y-6">
@@ -130,7 +183,7 @@ export default function MomentsPage() {
               key={p.id}
               {...p}
               onEdit={handleEditOpen}
-              onDelete={handleDelete}   // <-- QUAN TRỌNG
+              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -146,7 +199,7 @@ export default function MomentsPage() {
         <EditMomentDialog
           initial={editing}
           onClose={() => setEditing(null)}
-          onSubmit={() => {}} 
+          onSubmit={handleEdit}
         />
       )}
 

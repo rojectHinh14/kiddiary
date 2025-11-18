@@ -29,6 +29,7 @@ import VaccinationSummaryPage from "./pages/health/VaccinationSummaryPage";
 import MilkOverviewPage from "./pages/health/milk/MilkOverviewPage";
 import MilkHistoryPage from "./pages/health/milk/MilkHistoryPage";
 import MilkAddPage from "./pages/health/milk/MilkAddPage";
+import HomePage from "./pages/HomePage";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
       <Routes>
         {/* Auth */}
         <Route path="/login" element={<AuthPage />} />
+        <Route path="/" element={<HomePage />} />
 
         {/* TẤT CẢ trang dùng chung layout */}
         <Route path="/home" element={<HomeLayout />}>
@@ -61,9 +63,9 @@ function App() {
               path="vaccination/summary/:childId"
               element={<VaccinationSummaryPage />}
             />
-            <Route path="sleep" element={<SleepTrackerPage />} />
-            <Route path="sleep/new" element={<SleepAddPage />} />
-            <Route path="sleep/history" element={<SleepHistoryPage />} />
+            <Route path="sleep/:childId" element={<SleepTrackerPage />} />
+            <Route path="sleep/:childId/new" element={<SleepAddPage />} />
+            <Route path="sleep/:childId/history" element={<SleepHistoryPage />} />
             <Route path="growth/:childId" element={<GrowthPage />} />
           <Route
           path="growth/:childId/new"

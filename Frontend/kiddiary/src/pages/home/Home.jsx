@@ -111,8 +111,8 @@ export default function Home() {
   );
 
   const handleDelete = useCallback(
+     console.log("[Home] handleDelete CALLED with id =", id);
     async (id) => {
-      console.log("[Home] handleDelete CALLED with id =", id);
       const prevPosts = posts;
       setPosts((list) => list.filter((x) => String(x.id) !== String(id)));
 
