@@ -1,30 +1,85 @@
 // src/pages/health/milk/MilkOverviewPage.jsx
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import ChildCareRoundedIcon from "@mui/icons-material/ChildCareRounded";
-
+import IconButton from "@mui/material/IconButton";
+import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import {
-  loadChildMilkLogs,
-} from "../../../store/slice/childMilkSlice"; // chỉnh path nếu khác
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+} from "recharts";
 
-export default function MilkOverviewPage({ babyName = "Yến Nhi" }) {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { childId } = useParams(); // /home/health/milk/:childId
-
+import { loadChildMilkLogs } from "../../../store/slice/childMilkSlice";
+import { getChildrenByUser } from "../../../services/childService"; 
+export default function MilkOverviewPage() {
   const { totalToday, logs, last7Days, date, loading, error } = useSelector(
     (state) => state.childMilk
   );
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { childId } = useParams(); // lấy id từ URL
+
+  const [babyName, setBabyName] = useState(""); // tên bé
+
+  const ONE_LITER_ML = 1000;
+
+  const weeklyChartData = (last7Days || [])
+    .slice()
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .map((d) => ({
+      label: new Date(d.date).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      }),
+      totalMl: d.totalMl || 0,
+    }));
+
+  const maxWeeklyMl = weeklyChartData.length
+    ? Math.max(ONE_LITER_ML, ...weeklyChartData.map((d) => d.totalMl || 0))
+    : ONE_LITER_ML;
+
+  const yMaxDomain = maxWeeklyMl + 200;
+
+  // 🔹 Load tên bé theo childId, dùng đúng getChildrenByUser phía backend
+  useEffect(() => {
+    const fetchChildName = async () => {
+      if (!childId) return;
+
+      try {
+        const children = await getChildrenByUser(); // <-- trả thẳng array children
+
+        const found = children.find(
+          (c) => String(c.id) === String(childId)
+        );
+
+        if (found) {
+          setBabyName(`${found.firstName} ${found.lastName}`.trim());
+        } else {
+          setBabyName("Unknown child");
+        }
+      } catch (err) {
+        console.error("Error fetching children:", err);
+        setBabyName("Unknown child");
+      }
+    };
+
+    fetchChildName();
+  }, [childId]);
 
   // load milk logs cho hôm nay khi vào trang / đổi childId
   useEffect(() => {
@@ -41,25 +96,31 @@ export default function MilkOverviewPage({ babyName = "Yến Nhi" }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 gap-3">
         <div className="flex items-center gap-3">
+          {/* Back luôn quay về đúng trang milk của bé đó */}
           <IconButton
             onClick={() => navigate("/home/health")}
             sx={{
               width: 40,
               height: 40,
               borderRadius: "999px",
-              background: "#fff",
+              background: "#FFF",
               boxShadow: "0 2px 6px rgba(0,0,0,.08)",
+              "&:hover": { background: "#FFF" },
             }}
           >
             <ArrowBackIosNewRoundedIcon fontSize="small" />
           </IconButton>
+
           <Typography variant="h5" sx={{ fontWeight: 800, color: "#374151" }}>
             Feeding Overview for
           </Typography>
+
           <Chip
             label={
               <div className="flex items-center gap-2">
-                <span className="font-semibold">{babyName}</span>
+                <span className="font-semibold">
+                  {babyName || "Loading..."}
+                </span>
                 <ChildCareRoundedIcon className="text-rose-400" />
               </div>
             }
@@ -190,24 +251,42 @@ export default function MilkOverviewPage({ babyName = "Yến Nhi" }) {
             Last 7 days
           </Typography>
 
-          {/* Nếu chưa làm chart, tạm hiển thị list đơn giản từ last7Days */}
-          {last7Days && last7Days.length > 0 ? (
-            <div className="space-y-1">
-              {last7Days.map((d) => (
-                <div
-                  key={d.date}
-                  className="flex justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700"
-                >
-                  <span>
-                    {new Date(d.date).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <span className="font-semibold">{d.totalMl} ml</span>
-                </div>
-              ))}
-            </div>
+          {weeklyChartData && weeklyChartData.length > 0 ? (
+            <Box
+              sx={{
+                height: 260,
+                bgcolor: "#F9FAFB",
+                borderRadius: 2,
+                px: 2,
+                py: 1,
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 12 }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(v) => `${v} ml`}
+                    domain={[0, yMaxDomain]}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`${value} ml`, "Total"]}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <ReferenceLine
+                    y={ONE_LITER_ML}
+                    stroke="#F97316"
+                    strokeDasharray="4 4"
+                  />
+                  <Bar dataKey="totalMl" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
           ) : (
             <Box
               sx={{

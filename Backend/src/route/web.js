@@ -8,6 +8,7 @@ import searchController from "../controllers/searchController.js";
 import { verifyToken } from "../middleware/verifyToken.js";
 import passport from "../config/passport.js";
 import { generateToken } from "../helpers/generateToken.js";
+import chatController from "../controllers/chatController.js";
 let router = express.Router();
 let initWebRoutes = (app) => {
   router.get("/about", homeController.getHomePage);
@@ -176,25 +177,29 @@ let initWebRoutes = (app) => {
     childController.deleteChildMilkLog
   );
   router.post(
-    "/children/:childId/sleep",
+    "/api/children/:childId/sleep",
     verifyToken,
     childController.createSleep
   );
   router.get(
-    "/children/:childId/sleep",
+    "/api/children/:childId/sleep",
     verifyToken,
     childController.getSleepHistory
   );
 
-  router.put("/sleep/:id", verifyToken, childController.updateSleep);
-  router.delete("/sleep/:id", verifyToken, childController.deleteSleep);
+  router.put("/api/children/sleep/:id", verifyToken, childController.updateSleep);
+  router.delete("/api/children/sleep/:id", verifyToken, childController.deleteSleep);
+  router.get( "/api/children/:childId/sleep/week",verifyToken,childController.getSleepWeek);
+  router.post("/api/chat",verifyToken,chatController.chatWithChildrenInfo);
   router.get(
-    "/children/:childId/sleep/week",
-    verifyToken,
-    childController.getSleepWeek
-  );
+  "/api/children/:childId/milk-logs-range",
+  verifyToken,
+  childController.getChildMilkLogsByDateRange
+);
 
   return app.use("/", router);
 };
+router.put("/api/media/:id", verifyToken, mediaController.updateMedia);
+
 
 module.exports = initWebRoutes;

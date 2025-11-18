@@ -85,7 +85,7 @@ export default function GrowthAddPage() {
           <ArrowBackIosNewRoundedIcon fontSize="small" />
         </IconButton>
         <Typography variant="h5" sx={{ fontWeight: 800, color: "#374151" }}>
-          Add New Measurement for
+          Add New Measurement 
         </Typography>
       </div>
 
