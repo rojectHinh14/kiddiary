@@ -820,6 +820,30 @@ export const getSleepLogs = async (childId, from, to) => {
     order: [["startTime", "ASC"]],
   });
 };
+const getChildMilkLogsByDateRange = async (userId, childId, fromDate, toDate) => {
+  const from = new Date(fromDate + "T00:00:00");
+  const to   = new Date(toDate   + "T23:59:59");
+
+  const logs = await db.ChildMilkLog.findAll({
+    where: {
+      childId,
+      feedingAt: {
+        [Op.between]: [from, to],
+      },
+    },
+    order: [["feedingAt", "ASC"]],
+  });
+
+  return {
+    errCode: 0,
+    errMessage: "OK",
+    data: {
+      logs,
+      totalToday: 0,
+      last7Days: [],
+    },
+  };
+};
 
 export const updateSleepLog = async (id, data) => {
   const log = await db.ChildSleepLog.findByPk(id);
@@ -1089,6 +1113,7 @@ export default {
   getChildHistoryDetail,
   getChildMilkLogs,
   createChildMilkLog,
+  getChildMilkLogsByDateRange,
   updateChildMilkLog,
   deleteChildMilkLog,
 };

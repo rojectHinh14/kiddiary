@@ -2,8 +2,18 @@ import fs from "fs";
 import path from "path";
 import db from "../models/index.js";
 import { Op } from "sequelize";
+import aiTaggingService from "./aiTaggingService";
+
 const createMedia = async ({ userId, fileBase64, description, date }) => {
   try {
+    //AI Service calling
+    console.log("Calling AI service to generate tags...");
+    const aiResult = await aiTaggingService.generateTags(fileBase64, null);
+
+    // Lấy kết quả từ AI
+    const aiTagsArray = aiResult.tags || []; // Mảng các tag
+
+    //Old logic
     const base64Data = fileBase64.replace(/^data:.+;base64,/, "");
     const uploadDir = path.join(__dirname, "../../uploads");
 
@@ -22,6 +32,7 @@ const createMedia = async ({ userId, fileBase64, description, date }) => {
       userId,
       fileUrl,
       description: description || "",
+      aiTags: aiTagsArray.join(", "), // Lưu dưới dạng chuỗi phân tách bằng dấu phẩy
       fileTypeCode: "IMG",
       date: date || new Date().toISOString().split("T")[0],
     });
@@ -103,4 +114,54 @@ const searchByAiTags = async (userId, keyword) => {
     return { errCode: 1, message: "Error searching media" };
   }
 };
-export default { createMedia, getAllMediaByUser, deleteMedia, searchByAiTags };
+
+
+const updateMedia = async (userId, mediaId, { fileBase64, description, date }) => {
+  try {
+    const media = await db.Media.findOne({ where: { id: mediaId, userId } });
+    if (!media) {
+      return { errCode: 1, message: "Media not found or not authorized" };
+    }
+
+    if (fileBase64) {
+      const base64Data = fileBase64.replace(/^data:.+;base64,/, "");
+      const uploadDir = path.join(__dirname, "../../uploads");
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const newFileName = `media_${Date.now()}_${userId}.jpg`;
+      const newFilePath = path.join(uploadDir, newFileName);
+
+      fs.writeFileSync(newFilePath, Buffer.from(base64Data, "base64"));
+
+      const oldFilePath = path.join(__dirname, "../../", media.fileUrl);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+
+      media.fileUrl = `/uploads/${newFileName}`;
+    }
+
+    if (typeof description !== "undefined") {
+      media.description = description;
+    }
+    if (date) {
+      media.date = date;
+    }
+
+    await media.save();
+
+    return { errCode: 0, message: "Update success", data: media };
+  } catch (err) {
+    console.error("Error updating media:", err);
+    return {
+      errCode: 2,
+      message: "Error while updating media",
+      error: err.message,
+    };
+  }
+};
+
+export default { createMedia, getAllMediaByUser, deleteMedia, searchByAiTags,updateMedia  };

@@ -1,4 +1,3 @@
-// src/pages/health/milk/MilkHistoryPage.jsx
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,7 +18,10 @@ import {
   loadChildMilkLogs,
   updateMilkLog,
   deleteMilkLog,
+  loadChildMilkLogsByDateRange,
 } from "../../../store/slice/childMilkSlice";
+
+const ROWS_PER_PAGE = 5; // số “ngày” trên 1 trang
 
 export default function MilkHistoryPage() {
   const navigate = useNavigate();
@@ -30,7 +32,7 @@ export default function MilkHistoryPage() {
 
   const [page, setPage] = useState(1);
   const [from, setFrom] = useState(todayStr);
-  const [to, setTo] = useState("");
+  const [to, setTo] = useState(todayStr);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -39,13 +41,19 @@ export default function MilkHistoryPage() {
 
   const { logs, loading, error } = useSelector((state) => state.childMilk);
 
-  // tải lịch sử theo ngày "from" (tạm thời dùng 1 ngày; backend chỉ hỗ trợ date single)
-  useEffect(() => {
-    if (!childId || !from) return;
-    dispatch(loadChildMilkLogs({ childId, date: from }));
-  }, [childId, from, dispatch]);
+  // 🔴 LƯU Ý: Nếu muốn load theo range FROM-TO, bạn cần sửa dòng dưới thành:
+  // dispatch(loadChildMilkLogs({ childId, fromDate: from, toDate: to }));
+  // và sửa childMilkSlice để nhận 2 tham số này.
+  // Hiện tại, code vẫn đang chạy theo logic cũ (chỉ dùng ngày FROM)
+ useEffect(() => {
+  if (!childId || !from || !to) return;
+  if (from > to) return; // hoặc swap from/to tuỳ bạn
 
-  // group logs theo ngày để hiển thị giống rows mock
+  dispatch(loadChildMilkLogsByDateRange({ childId, fromDate: from, toDate: to }));
+}, [childId, from, to, dispatch]);
+
+
+  // group logs theo ngày
   const rows = useMemo(() => {
     if (!logs || logs.length === 0) return [];
 
@@ -69,7 +77,7 @@ export default function MilkHistoryPage() {
         id: log.id,
         time: timeStr,
         amount: log.amountMl,
-        type: log.sourceCode, // BREAST / BOTTLE
+        type: log.sourceCode,
         note: log.note || "",
         raw: log,
       });
@@ -82,10 +90,27 @@ export default function MilkHistoryPage() {
     }));
   }, [logs]);
 
-  // ===== handlers =====
+  // ====== PHÂN TRANG ĐỘNG ======
+  const totalPages = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
+
+  const currentPage = Math.min(page, totalPages); // nếu xóa bớt ngày
+  const pagedRows = rows.slice(
+    (currentPage - 1) * ROWS_PER_PAGE,
+    currentPage * ROWS_PER_PAGE
+  );
+
+  const handleChangeFrom = (value) => {
+    setFrom(value);
+    setPage(1);
+  };
+
+  const handleChangeTo = (value) => {
+    setTo(value);
+    setPage(1);
+  };
+
   const handleEdit = (item) => {
     setSelected(item);
-    // time cho input type="time" phải dạng HH:mm 24h
     const rawDate = new Date(item.raw.feedingAt);
     const hh = String(rawDate.getHours()).padStart(2, "0");
     const mm = String(rawDate.getMinutes()).padStart(2, "0");
@@ -122,10 +147,11 @@ export default function MilkHistoryPage() {
       const newDate = new Date(oldDate);
       newDate.setHours(h, m, 0, 0);
 
+      // ✅ SỬA LỖI: Đổi 'id' thành 'milkLogId'
       await dispatch(
         updateMilkLog({
           childId,
-          milkLogId: old.id,
+          milkLogId: old.id, 
           payload: {
             feedingAt: newDate.toISOString(),
             amountMl,
@@ -145,10 +171,11 @@ export default function MilkHistoryPage() {
     if (!selected || !childId) return;
 
     try {
+      // ✅ SỬA LỖI: Đổi 'id' thành 'milkLogId'
       await dispatch(
         deleteMilkLog({
           childId,
-          milkLogId: selected.raw.id,
+          milkLogId: selected.raw.id, 
         })
       ).unwrap();
       setDeleteOpen(false);
@@ -158,6 +185,7 @@ export default function MilkHistoryPage() {
     }
   };
 
+  // ====== RENDER ======
   return (
     <div className="py-4">
       {/* Header */}
@@ -179,20 +207,20 @@ export default function MilkHistoryPage() {
         </Typography>
       </div>
 
-      {/* Date range filter (tạm dùng 'from' làm ngày đang xem) */}
+      {/* Date range filter */}
       <div className="flex items-center gap-2 text-gray-600 text-sm mb-3">
         <span>from:</span>
         <input
           type="date"
           value={from}
-          onChange={(e) => setFrom(e.target.value)}
+          onChange={(e) => handleChangeFrom(e.target.value)}
           className="border rounded-lg px-2 py-1 outline-none focus:border-[#2CC1AE]"
         />
         <span>to:</span>
         <input
           type="date"
           value={to}
-          onChange={(e) => setTo(e.target.value)}
+          onChange={(e) => handleChangeTo(e.target.value)}
           className="border rounded-lg px-2 py-1 outline-none focus:border-[#2CC1AE]"
         />
         <CalendarTodayRoundedIcon
@@ -213,16 +241,17 @@ export default function MilkHistoryPage() {
         </Typography>
       )}
 
-      {/* List theo ngày */}
-      {rows.length === 0 && !loading && !error && (
+      {/* Nếu không có dữ liệu */}
+      {pagedRows.length === 0 && !loading && !error && (
         <Typography sx={{ color: "#6B7280", mb: 2 }}>
           Không có bản ghi bú cho ngày này.
         </Typography>
       )}
 
-      {rows.map((day, i) => (
+      {/* List theo ngày (đã phân trang) */}
+      {pagedRows.map((day) => (
         <div
-          key={i}
+          key={day.date}
           className="mb-4 rounded-2xl bg-[#FFF1D5] p-3 shadow-sm"
         >
           <div className="text-sm font-semibold text-gray-700 mb-2">
@@ -294,33 +323,24 @@ export default function MilkHistoryPage() {
               label="Time"
               type="time"
               value={form.time}
-              onChange={(e) =>
-                setForm({ ...form, time: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, time: e.target.value })}
               InputLabelProps={{ shrink: true }}
             />
             <TextField
               label="Amount (ml)"
               type="number"
               value={form.amount}
-              onChange={(e) =>
-                setForm({ ...form, amount: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
             />
             <TextField
               label="Note"
               value={form.note}
-              onChange={(e) =>
-                setForm({ ...form, note: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, note: e.target.value })}
             />
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button
-            onClick={() => setEditOpen(false)}
-            sx={{ textTransform: "none" }}
-          >
+          <Button onClick={() => setEditOpen(false)} sx={{ textTransform: "none" }}>
             Cancel
           </Button>
           <Button
@@ -377,25 +397,26 @@ export default function MilkHistoryPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Pagination UI (tạm thời client-side, chưa nối backend) */}
+      {/* Pagination động */}
       <div className="mt-4 flex items-center justify-center gap-2">
         <button
-          disabled={page === 1}
+          disabled={currentPage === 1}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           className={`px-4 py-2 rounded-xl border ${
-            page === 1
+            currentPage === 1
               ? "text-gray-400 border-gray-200"
               : "hover:bg-black/5"
           }`}
         >
           Previous
         </button>
-        {[1, 2, 3].map((p) => (
+
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
           <button
             key={p}
             onClick={() => setPage(p)}
             className={`w-8 h-8 rounded-md border text-sm ${
-              p === page
+              p === currentPage
                 ? "bg-[#2CC1AE] text-white border-[#2CC1AE]"
                 : "hover:bg-black/5"
             }`}
@@ -403,11 +424,12 @@ export default function MilkHistoryPage() {
             {p}
           </button>
         ))}
+
         <button
-          disabled={page === 3}
-          onClick={() => setPage((p) => Math.min(3, p + 1))}
+          disabled={currentPage === totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           className={`px-4 py-2 rounded-xl border ${
-            page === 3
+            currentPage === totalPages
               ? "text-gray-400 border-gray-200"
               : "hover:bg-black/5"
           }`}

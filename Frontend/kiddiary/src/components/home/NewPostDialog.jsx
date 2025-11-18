@@ -27,7 +27,20 @@ export default function NewPostDialog({ open, onClose, onSubmit }) {
     () => files.map((f) => URL.createObjectURL(f)),
     [files]
   );
+  const resetForm = () => {
+  setFiles([]);
+  setCaption("");
+  setDate(() => new Date().toISOString().slice(0, 10));
+  setPeople("");
+  if (fileInputRef.current) {
+    fileInputRef.current.value = null; 
+  }
+};
 
+const handleClose = () => {
+  resetForm();
+  onClose?.(); 
+};
   const pickFiles = () => fileInputRef.current?.click();
 
   const onDrop = (e) => {
@@ -47,8 +60,6 @@ export default function NewPostDialog({ open, onClose, onSubmit }) {
 
   const handleSubmit = () => {
     onSubmit?.({ files, caption, date, people });
-    // tuỳ bạn có muốn reset form không
-    onClose?.();
   };
 
   return (
@@ -108,7 +119,7 @@ export default function NewPostDialog({ open, onClose, onSubmit }) {
                 />
               </>
             ) : (
-              <div className="w-full p-3 grid grid-cols-3 gap-3">
+              <div className="w-full p-3 ">
                 {previews.map((src, i) => (
                   <div
                     key={i}

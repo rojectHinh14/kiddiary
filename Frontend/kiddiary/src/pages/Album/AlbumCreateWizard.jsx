@@ -151,7 +151,7 @@ export default function AlbumCreateWizard({
               : albumId
               ? "Add moments to album"
               : "Create album with moments"}{" "}
-            // ← THÊM loading text
+
           </button>
           <button
             onClick={onClose}

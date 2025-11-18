@@ -1,5 +1,4 @@
-import db from "../models/index.js";
-
+const db = require("../models");
 /**
  * Lưu lịch sử chat vào database
  */

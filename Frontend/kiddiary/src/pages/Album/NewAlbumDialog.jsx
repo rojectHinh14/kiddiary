@@ -12,7 +12,7 @@ export default function NewAlbumDialog({ open, onClose, onNext }) {
   const handleNext = () => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      alert("Please enter album title"); // ← THÊM VALIDATE
+      alert("Please enter album title"); 
       return;
     }
     const file = fileRef.current?.files?.[0] || null;
@@ -57,24 +57,6 @@ export default function NewAlbumDialog({ open, onClose, onNext }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">
-              Cover image (optional)
-            </label>
-            <div className="mt-2 flex items-center gap-3">
-              <input
-                ref={fileRef}
-                onChange={handleFile}
-                type="file"
-                accept="image/*"
-              />
-              {preview && (
-                <img
-                  src={preview}
-                  alt="preview"
-                  className="w-24 h-20 object-cover rounded-md border"
-                />
-              )}
-            </div>
           </div>
         </div>
 

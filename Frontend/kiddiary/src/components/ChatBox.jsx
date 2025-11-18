@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 import axios from "axios";
-import { useEffect, useRef } from "react";
 
 export default function ChatBox({
   logoSrc = "/chatbox/logo.png",
@@ -8,6 +8,8 @@ export default function ChatBox({
 }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const [messages, setMessages] = useState([
     {
       role: "bot",
@@ -16,48 +18,14 @@ export default function ChatBox({
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
 
-  // Load lịch sử chat khi mở chatbox lần đầu
-  useEffect(() => {
-    if (isChatOpen && !historyLoaded) {
-      loadChatHistory();
-    }
-  }, [isChatOpen]);
+  const messagesEndRef = useRef(null);
 
-  const loadChatHistory = async () => {
-    try {
-      const res = await axios.get("http://localhost:8080/api/gemini/history", {
-        withCredentials: true,
-      });
-
-      if (res.data.success && res.data.history.length > 0) {
-        // Convert history to messages format
-        const historyMessages = [];
-        res.data.history.forEach((log) => {
-          historyMessages.push({ role: "user", text: log.question });
-          historyMessages.push({ role: "bot", text: log.answer });
-        });
-
-        // Prepend history trước greeting message
-        setMessages([
-          ...historyMessages,
-          {
-            role: "bot",
-            text: "Xin chào, mình có thể giúp gì cho bạn?",
-          },
-        ]);
-      }
-
-      setHistoryLoaded(true);
-    } catch (err) {
-      console.error("Failed to load chat history:", err);
-      setHistoryLoaded(true); // Đánh dấu đã thử load
-    }
-  };
-
+  // Mở / đóng chat
   const handleToggle = () => {
     if (isChatOpen) {
+      // khi đóng thì luôn thu nhỏ lại
+      setIsExpanded(false);
       setIsClosing(true);
       setTimeout(() => {
         setIsChatOpen(false);
@@ -68,6 +36,7 @@ export default function ChatBox({
     }
   };
 
+  // Gửi tin nhắn lên API /api/chat
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -79,27 +48,23 @@ export default function ChatBox({
 
     try {
       const res = await axios.post(
-        "http://localhost:8080/api/gemini/chat",
+        "http://localhost:8080/api/chat",
         { prompt: input },
         {
-          withCredentials: true, // ← FIX: Gửi cookie kèm theo
+          withCredentials: true,
         }
       );
 
       const botReply =
         res.data.reply || "Xin lỗi, mình không nhận được phản hồi.";
-
-      // Nếu có kết quả từ database, hiển thị thêm
-      const dbResults = res.data.dbResults;
-      const totalResults = res.data.totalResults || 0;
+      const childrenCount = res.data.childrenCount ?? null;
 
       setMessages((prev) => [
         ...prev,
         {
           role: "bot",
           text: botReply,
-          results: dbResults, // Lưu kết quả để render sau
-          total: totalResults,
+          childrenCount,
         },
       ]);
     } catch (err) {
@@ -114,141 +79,201 @@ export default function ChatBox({
     }
   };
 
-  const messagesEndRef = useRef(null);
-
+  // Auto scroll xuống cuối khi có message mới
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {/* Nút mở/đóng chat */}
-      <button
-        onClick={handleToggle}
-        aria-label={isChatOpen ? "Đóng hộp chat" : "Mở hộp chat"}
-        className="w-16 h-16 rounded-full bg-[#41B3A2] flex items-center justify-center shadow-2xl transition-all duration-300 hover:bg-[#379889] focus:outline-none focus:ring-4 focus:ring-[#41B3A2]/30"
-      >
-        {!isChatOpen ? (
-          <img
-            src={logoSrc}
-            alt="Logo"
-            className="w-10 h-10 rounded-full object-cover"
-            draggable={false}
-          />
-        ) : (
-          <span className="text-3xl leading-none font-bold text-white">×</span>
-        )}
-      </button>
-
-      {/* Chat box */}
-      {(isChatOpen || isClosing) && (
-        <div
-          className={[
-            "absolute bottom-20 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden",
-            isClosing ? "animate-fadeOutDown" : "animate-fadeInUp",
-          ].join(" ")}
-          role="dialog"
-          aria-labelledby="chatbox-title"
-          aria-modal="false"
-        >
-          {/* Header */}
-          <div className="bg-[#41B3A2] text-white px-4 py-2 flex items-center gap-2">
+  // Khu vực hiển thị nội dung chat (dùng chung cho 2 layout)
+  const MessagesArea = () => (
+    <div className="p-4 flex-1 overflow-y-auto text-sm text-gray-700 space-y-2">
+      {messages.map((msg, idx) =>
+        msg.role === "bot" ? (
+          <div key={idx} className="flex items-start gap-2">
             <img
               src={logoSrc}
               alt=""
-              className="w-5 h-5 rounded-full object-cover"
+              className="w-6 h-6 rounded-full object-cover"
               aria-hidden="true"
               draggable={false}
             />
-            <div id="chatbox-title" className="font-semibold">
-              {title}
+            <div className="bg-gray-100 rounded-xl px-3 py-2 max-w-[90%]">
+              <span className="font-semibold">Bot:</span>{" "}
+              <div className="prose prose-sm whitespace-pre-wrap">
+                <ReactMarkdown>
+                  {typeof msg.text === "string"
+                    ? msg.text
+                    : JSON.stringify(msg.text ?? "")}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
-
-          {/* Nội dung chat */}
-          <div className="p-4 h-64 overflow-y-auto text-sm text-gray-700 space-y-2">
-            {messages.map((msg, idx) =>
-              msg.role === "bot" ? (
-                <div key={idx} className="flex items-start gap-2">
-                  <img
-                    src={logoSrc}
-                    alt=""
-                    className="w-6 h-6 rounded-full object-cover"
-                    aria-hidden="true"
-                    draggable={false}
-                  />
-                  <div className="bg-gray-100 rounded-xl px-3 py-2 max-w-[90%]">
-                    <span className="font-semibold">Bot:</span> {msg.text}
-                    {/* Hiển thị kết quả nếu có */}
-                    {msg.total > 0 && msg.results && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        <div className="font-semibold mb-1">
-                          Tìm thấy {msg.total} kết quả:
-                        </div>
-                        {msg.results.data?.slice(0, 5).map((item, i) => (
-                          <div key={i} className="mb-1">
-                            {item.fileUrl ? (
-                              <a
-                                href={item.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#41B3A2] hover:underline"
-                              >
-                                📷 {item.description || "Ảnh"} ({item.date})
-                              </a>
-                            ) : (
-                              <span>
-                                📁 {item.albumName} ({item.Media?.length || 0}{" "}
-                                ảnh)
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                        {msg.total > 5 && (
-                          <div className="text-gray-400 italic">
-                            ... và {msg.total - 5} kết quả khác
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div
-                  key={idx}
-                  className="flex items-start justify-end gap-2 text-right"
-                >
-                  <div className="bg-[#41B3A2]/10 rounded-xl px-3 py-2 max-w-[75%]">
-                    <span className="font-semibold text-[#41B3A2]">Bạn:</span>{" "}
-                    {msg.text}
-                  </div>
-                </div>
-              )
-            )}
-            {loading && (
-              <div className="text-gray-400 text-sm italic">
-                Đang trả lời...
-              </div>
-            )}
-            <div ref={messagesEndRef} />
+        ) : (
+          <div
+            key={idx}
+            className="flex items-start justify-end gap-2 text-right"
+          >
+            <div className="bg-[#41B3A2]/10 rounded-xl px-3 py-2 max-w-[75%]">
+              <span className="font-semibold text-[#41B3A2]">Bạn:</span>{" "}
+              {msg.text}
+            </div>
           </div>
+        )
+      )}
+      {loading && (
+        <div className="text-gray-400 text-sm italic">Đang trả lời...</div>
+      )}
+      <div ref={messagesEndRef} />
+    </div>
+  );
 
-          {/* Ô nhập */}
-          <form className="flex border-t" onSubmit={handleSend}>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Nhập tin nhắn..."
-              className="flex-1 px-3 py-2 text-sm outline-none"
+  return (
+    <>
+      {/* Nút mở/đóng + khung nhỏ ở góc phải */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {/* Nút mở/đóng chat */}
+        <button
+          onClick={handleToggle}
+          aria-label={isChatOpen ? "Đóng hộp chat" : "Mở hộp chat"}
+          className="w-16 h-16 rounded-full bg-[#41B3A2] flex items-center justify-center shadow-2xl transition-all duration-300 hover:bg-[#379889] focus:outline-none focus:ring-4 focus:ring-[#41B3A2]/30"
+        >
+          {!isChatOpen && !isClosing ? (
+            <img
+              src={logoSrc}
+              alt="Logo"
+              className="w-10 h-10 rounded-full object-cover"
+              draggable={false}
             />
-            <button
-              type="submit"
-              className="px-4 py-2 text-[#41B3A2] font-semibold hover:text-[#379889] focus:outline-none"
-            >
-              Gửi
-            </button>
-          </form>
+          ) : (
+            <span className="text-3xl leading-none font-bold text-white">
+              ×
+            </span>
+          )}
+        </button>
+
+        {/* Chat box nhỏ ở góc phải (khi không ở chế độ mở rộng) */}
+        {(isChatOpen || isClosing) && !isExpanded && (
+          <div
+            className={[
+              "absolute bottom-20 right-0 w-80 h-[360px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col",
+              isClosing ? "animate-fadeOutDown" : "animate-fadeInUp",
+            ].join(" ")}
+            role="dialog"
+            aria-labelledby="chatbox-title"
+            aria-modal="false"
+          >
+            {/* Header */}
+            <div className="bg-[#41B3A2] text-white px-4 py-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <img
+                  src={logoSrc}
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover"
+                  aria-hidden="true"
+                  draggable={false}
+                />
+                <div id="chatbox-title" className="font-semibold">
+                  {title}
+                </div>
+              </div>
+
+              {/* Nút mở rộng */}
+              <button
+                type="button"
+                onClick={() => setIsExpanded(true)}
+                className="text-xs bg-white/15 hover:bg-white/25 rounded-full px-2 py-1"
+              >
+                Mở rộng
+              </button>
+            </div>
+
+            {/* Nội dung chat */}
+            <MessagesArea />
+
+            {/* Ô nhập */}
+            <form className="flex border-t" onSubmit={handleSend}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Nhập tin nhắn..."
+                className="flex-1 px-3 py-2 text-sm outline-none"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 text-[#41B3A2] font-semibold hover:text-[#379889] focus:outline-none"
+              >
+                Gửi
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+
+      {/* Chat box mở rộng giữa màn hình */}
+      {isChatOpen && isExpanded && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          {/* overlay mờ */}
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setIsExpanded(false)}
+          />
+
+          {/* khung chat to ở giữa */}
+          <div className="relative bg-white w-full max-w-xl h-[70vh] mx-4 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="bg-[#41B3A2] text-white px-4 py-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <img
+                  src={logoSrc}
+                  alt=""
+                  className="w-6 h-6 rounded-full object-cover"
+                  aria-hidden="true"
+                  draggable={false}
+                />
+                <div className="font-semibold">{title}</div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Thu nhỏ */}
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(false)}
+                  className="text-xs bg-white/15 hover:bg-white/25 rounded-full px-2 py-1"
+                >
+                  Thu nhỏ
+                </button>
+                {/* Đóng hẳn */}
+                <button
+                  type="button"
+                  onClick={handleToggle}
+                  className="text-lg leading-none font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Nội dung chat (dùng chung) */}
+            <MessagesArea />
+
+            {/* Ô nhập */}
+            <form className="flex border-t" onSubmit={handleSend}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Nhập tin nhắn..."
+                className="flex-1 px-3 py-2 text-sm outline-none"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 text-[#41B3A2] font-semibold hover:text-[#379889] focus:outline-none"
+              >
+                Gửi
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
@@ -265,6 +290,6 @@ export default function ChatBox({
         .animate-fadeInUp { animation: fadeInUp 0.3s ease-out forwards; }
         .animate-fadeOutDown { animation: fadeOutDown 0.3s ease-in forwards; }
       `}</style>
-    </div>
+    </>
   );
 }
