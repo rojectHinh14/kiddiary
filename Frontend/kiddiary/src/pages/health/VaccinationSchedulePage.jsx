@@ -116,26 +116,28 @@ function UpdateDialog({ open, onClose, data, onSave, saving }) {
           Update Vaccination Status
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          {data?.childName} • {data?.vaccineName} (Dose {data?.doseNumber})
+          {data?.childName} • {data?.vaccinationType} (Dose {data?.doseNumber})
         </Typography>
       </Box>
 
       <DialogContent sx={{ p: 0 }}>
         <Row label="Vaccine">
           <div>
-            <Typography fontWeight={700}>{data?.vaccineName}</Typography>
+            <Typography fontWeight={700}>{data?.vaccinationType}</Typography>
             <Typography variant="body2" color="text.secondary">
               {data?.diseaseName}
             </Typography>
           </div>
         </Row>
-        <Row label="Dose">Dose {data?.doseNumber}</Row>
+        <Row label="About">{data.about}</Row>
+        <Row label="Vaccine Name">Dose {data?.vaccineName}</Row>
         <Row label="Recommended Age">{data?.recommendedAge}</Row>
         <Row label="Description">
           <Typography sx={{ whiteSpace: "pre-wrap", fontSize: "0.95rem" }}>
             {data?.doseDescription || "-"}
           </Typography>
         </Row>
+        <Row label="Side Effects">{data.symptoms}</Row>
         <Row label="Status">
           <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
             <FormControl size="small" sx={{ minWidth: 180 }}>
@@ -256,7 +258,10 @@ export default function VaccinationSchedulePage() {
       vaccineDoseId: dose.id, // vaccineDoseId trong bảng dose
       childName: `${child?.firstName} ${child?.lastName}`.trim(),
       vaccineName: vaccine.vaccineName,
+      vaccinationType: vaccine.vaccinationType,
       diseaseName: vaccine.diseaseName,
+      about: vaccine.about,
+      symptoms: vaccine.symptoms,
       status,
       injectedDate,
       note: note || "",
@@ -384,7 +389,9 @@ export default function VaccinationSchedulePage() {
                   } hover:bg-blue-100 transition`}
                 >
                   <div className="col-span-4 p-4 border-r">
-                    <div className="font-semibold">{vaccine.vaccineName}</div>
+                    <div className="font-semibold">
+                      {vaccine.vaccinationType}
+                    </div>
                     <div className="text-xs text-gray-600">
                       {vaccine.diseaseName}
                     </div>

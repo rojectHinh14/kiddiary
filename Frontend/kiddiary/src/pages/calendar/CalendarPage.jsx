@@ -104,7 +104,7 @@ export default function CalendarPage() {
             id: media.id.toString(),
             date: format(new Date(media.date), "yyyy-MM-dd"),
             caption: media.description || "",
-            images: [`data:image/jpeg;base64,${media.fileUrl}`],
+            images: [`${import.meta.env.VITE_BACKEND_URL}${media.fileUrl}`],
             childId: "c1",
           }));
           setMoments(mappedMoments);
@@ -169,7 +169,7 @@ export default function CalendarPage() {
         onSubmit={handleCreate}
         defaultDate={selectedDate || new Date()}
       />
-      <ChatBox/>
+      <ChatBox />
     </div>
   );
 }

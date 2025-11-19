@@ -28,19 +28,19 @@ export default function NewPostDialog({ open, onClose, onSubmit }) {
     [files]
   );
   const resetForm = () => {
-  setFiles([]);
-  setCaption("");
-  setDate(() => new Date().toISOString().slice(0, 10));
-  setPeople("");
-  if (fileInputRef.current) {
-    fileInputRef.current.value = null; 
-  }
-};
+    setFiles([]);
+    setCaption("");
+    setDate(() => new Date().toISOString().slice(0, 10));
+    setPeople("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = null;
+    }
+  };
 
-const handleClose = () => {
-  resetForm();
-  onClose?.(); 
-};
+  const handleClose = () => {
+    resetForm();
+    onClose?.();
+  };
   const pickFiles = () => fileInputRef.current?.click();
 
   const onDrop = (e) => {
@@ -59,7 +59,12 @@ const handleClose = () => {
   };
 
   const handleSubmit = () => {
-    onSubmit?.({ files, caption, date, people });
+    if (files.length === 0 && !caption.trim()) return;
+
+    onSubmit?.({ files, caption, date: new Date(date), people });
+
+    resetForm();
+    onClose?.();
   };
 
   return (
@@ -166,7 +171,6 @@ const handleClose = () => {
             />
 
             {/* People */}
-           
           </div>
         </div>
       </DialogContent>
