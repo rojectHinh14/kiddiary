@@ -98,7 +98,6 @@ export default function Home() {
           } else {
             await fetchPosts();
           }
-          setOpenDialog(false);
         } else {
           alert("Upload failed: " + (response.data?.message || "Unknown error"));
         }

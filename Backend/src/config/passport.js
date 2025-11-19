@@ -6,6 +6,10 @@ import db from "../models/index.js";
 import dotenv from "dotenv";
 dotenv.config();
 
+// Mật khẩu placeholder cho OAuth
+const OAUTH_PLACEHOLDER_PASSWORD = "OAUTH_USER_PLACEHOLDER_SAFE_TO_DELETE";
+
+// --- Serialize ---
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
@@ -19,7 +23,15 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// ✅ GOOGLE
+// ✨ Hàm chuẩn hóa email ✨
+const normalizeEmail = (email) => {
+  if (!email) return null;
+  return email.trim().toLowerCase();
+};
+
+/* ---------------------------------------------------
+   GOOGLE STRATEGY
+--------------------------------------------------- */
 passport.use(
   new GoogleStrategy(
     {
@@ -29,21 +41,28 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const email = profile.emails[0].value;
-        let user = await db.User.findOne({ where: { email } });
+        const email = normalizeEmail(profile.emails[0].value);
+
+        let user =
+          (await db.User.findOne({ where: { googleId: profile.id } })) ||
+          (await db.User.findOne({ where: { email } }));
 
         if (!user) {
           user = await db.User.create({
-            firstName: profile.name.givenName || "",
-            lastName: profile.name.familyName || "",
+            googleId: profile.id,
+            firstName: profile.name?.givenName || "",
+            lastName: profile.name?.familyName || "",
             email,
-            password: "", // Không cần password
+            password: OAUTH_PLACEHOLDER_PASSWORD,
             image: profile.photos?.[0]?.value,
             roleId: "R4",
           });
+        } else if (!user.googleId) {
+          user.googleId = profile.id;
+          await user.save();
         }
 
-        done(null, user);
+        return done(null, user);
       } catch (err) {
         done(err, null);
       }
@@ -51,7 +70,9 @@ passport.use(
   )
 );
 
-// ✅ FACEBOOK
+/* ---------------------------------------------------
+   FACEBOOK STRATEGY
+--------------------------------------------------- */
 passport.use(
   new FacebookStrategy(
     {
@@ -62,22 +83,31 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const email =
-          profile.emails?.[0]?.value || `${profile.id}@facebook.com`;
-        let user = await db.User.findOne({ where: { email } });
+        const email = normalizeEmail(
+          profile.emails?.[0]?.value || `${profile.id}@facebook.com`
+        );
+
+        let user =
+          (await db.User.findOne({ where: { facebookId: profile.id } })) ||
+          (await db.User.findOne({ where: { email } }));
 
         if (!user) {
           user = await db.User.create({
-            firstName: profile.name?.givenName || "",
+            facebookId: profile.id,
+            firstName:
+              profile.name?.givenName || profile.displayName || "FacebookUser",
             lastName: profile.name?.familyName || "",
             email,
-            password: "",
+            password: OAUTH_PLACEHOLDER_PASSWORD,
             image: profile.photos?.[0]?.value,
             roleId: "R4",
           });
+        } else if (!user.facebookId) {
+          user.facebookId = profile.id;
+          await user.save();
         }
 
-        done(null, user);
+        return done(null, user);
       } catch (err) {
         done(err, null);
       }
@@ -85,7 +115,9 @@ passport.use(
   )
 );
 
-// ✅ GITHUB
+/* ---------------------------------------------------
+   GITHUB STRATEGY
+--------------------------------------------------- */
 passport.use(
   new GithubStrategy(
     {
@@ -96,25 +128,30 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const email =
-          profile.emails && profile.emails[0]
-            ? profile.emails[0].value
-            : `${profile.username}@github.com`;
+        const email = normalizeEmail(
+          profile.emails?.[0]?.value || `${profile.username}@github.com`
+        );
 
-        let user = await db.User.findOne({ where: { email } });
+        let user =
+          (await db.User.findOne({ where: { githubId: profile.id } })) ||
+          (await db.User.findOne({ where: { email } }));
 
         if (!user) {
           user = await db.User.create({
-            firstName: profile.displayName || profile.username,
+            githubId: profile.id,
+            firstName: profile.displayName || profile.username || "GithubUser",
             lastName: "",
             email,
-            password: "",
+            password: OAUTH_PLACEHOLDER_PASSWORD,
             image: profile.photos?.[0]?.value,
             roleId: "R4",
           });
+        } else if (!user.githubId) {
+          user.githubId = profile.id;
+          await user.save();
         }
 
-        done(null, user);
+        return done(null, user);
       } catch (err) {
         done(err, null);
       }

@@ -226,6 +226,8 @@ const getVaccinesByChild = async (childId) => {
                 "vaccinationType",
                 "diseaseName",
                 "description",
+                "about",
+                "symptoms",
               ],
             },
           ],
