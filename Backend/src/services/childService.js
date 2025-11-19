@@ -73,18 +73,30 @@ const getChildrenByUser = async (userId) => {
         {
           model: db.ChildHistory,
           as: "histories",
-          attributes: ["weight", "height", "date"],
-          limit: 1,
-          order: [["date", "DESC"]],
+
+          attributes: ["weight", "height", "date", "updatedAt"],
+
+          separate: true,
+
+          order: [["updatedAt", "DESC"]],
         },
       ],
       order: [["createdAt", "DESC"]],
     });
 
+    const formattedChildren = children.map((child) => {
+      const childData = child.get({ plain: true });
+      childData.latestHistory =
+        childData.histories && childData.histories.length > 0
+          ? childData.histories[0]
+          : null;
+      return childData;
+    });
+
     return {
       errCode: 0,
       errMessage: "Get children successfully",
-      data: children,
+      data: formattedChildren,
     };
   } catch (error) {
     console.error("Error in getChildrenByUser:", error);
@@ -820,9 +832,14 @@ export const getSleepLogs = async (childId, from, to) => {
     order: [["startTime", "ASC"]],
   });
 };
-const getChildMilkLogsByDateRange = async (userId, childId, fromDate, toDate) => {
+const getChildMilkLogsByDateRange = async (
+  userId,
+  childId,
+  fromDate,
+  toDate
+) => {
   const from = new Date(fromDate + "T00:00:00");
-  const to   = new Date(toDate   + "T23:59:59");
+  const to = new Date(toDate + "T23:59:59");
 
   const logs = await db.ChildMilkLog.findAll({
     where: {
