@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/pages/VaccinationSummaryPage.jsx
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -12,253 +13,335 @@ import {
   TableRow,
   Paper,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import BabyChangingStationRoundedIcon from "@mui/icons-material/BabyChangingStationRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import RemoveRoundedIcon from "@mui/icons-material/RemoveRounded";
-import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
-import instance from "../../axios";
+import {
+  useNavigate,
+  useParams,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
+import { useSelector } from "react-redux";
+import axios from "../../axios";
 
-/**
- * VaccinationSummaryPage.jsx (JS)
- * - Đọc childId từ: URL param → query → navigation state → fallback (1)
- * - Gọi API: GET /api/children/:childId/vaccines (sử dụng API_BASE)
- * - Gom nhóm theo diseaseName và một số rule (5-in-1/6-in-1, v.v.)
- * - Đã tiêm: ✓ xanh; Skipped: ✕ cam; Pending: số thứ tự
- */
-
-const API_BASE = "http://localhost:8080"; // đổi theo môi trường của bạn
-
-function pillStyle(color, bg) {
-  return {
-    width: 28,
-    height: 28,
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    bgcolor: bg,
-    border: `2px solid ${color}`,
-    color,
-    fontWeight: 800,
-  };
-}
-
-function Dose({ index, status }) {
+const DosePill = ({ status, doseNumber }) => {
   if (status === "injected") {
     return (
-      <Tooltip title={`Dose ${index + 1}: Injected`}>
-        <Box sx={pillStyle("#07A66B", "#E8F8EF")}>
-          <CheckRoundedIcon sx={{ fontSize: 18 }} />
+      <Tooltip title={`Dose ${doseNumber}: Injected`}>
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            bgcolor: "#10B981",
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CheckRoundedIcon sx={{ fontSize: 20 }} />
         </Box>
       </Tooltip>
     );
   }
+
   if (status === "skipped") {
     return (
-      <Tooltip title={`Dose ${index + 1}: Skipped`}>
-        <Box sx={pillStyle("#EF6C00", "#FFF3E0")}>
-          <CloseRoundedIcon sx={{ fontSize: 18 }} />
+      <Tooltip title={`Dose ${doseNumber}: Skipped`}>
+        <Box
+          sx={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            bgcolor: "#F97316",
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <CloseRoundedIcon sx={{ fontSize: 20 }} />
         </Box>
       </Tooltip>
     );
   }
-  if (status === "scheduled") {
-    return (
-      <Tooltip title={`Dose ${index + 1}: Scheduled`}>
-        <Box sx={pillStyle("#0284C7", "#F0F9FF")}>
-          <RemoveRoundedIcon sx={{ fontSize: 18 }} />
-        </Box>
-      </Tooltip>
-    );
-  }
+
   return (
-    <Tooltip title={`Dose ${index + 1}: Pending`}>
+    <Tooltip title={`Dose ${doseNumber}: Not injected yet`}>
       <Box
         sx={{
-          width: 28,
-          height: 28,
+          width: 32,
+          height: 32,
           borderRadius: "50%",
+          border: "3px solid #1E90FF",
+          bgcolor: "#EFF6FF",
+          color: "#1E40AF",
+          fontWeight: 800,
+          fontSize: 14,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: "#FFFBEF",
-          border: "2px solid #1B9C9E",
-          color: "#1B9C9E",
-          fontWeight: 700,
-          fontSize: 13,
         }}
       >
-        {index + 1}
+        {doseNumber}
       </Box>
     </Tooltip>
   );
-}
+};
 
-const norm = (s = "") => s.toLowerCase().replace(/\s+/g, " ").trim();
-function mapToSummaryCategory(vac) {
-  const name = norm(vac.vaccineName || "");
-  const disease = norm(vac.diseaseName || "");
-  const type = norm(vac.vaccinationType || "");
-
-  // 5-in-1 / 6-in-1
-  if (name.includes("6-in-1") || name.includes("5-in-1") || type.includes("6-in-1") || type.includes("5-in-1")) {
-    return "5-in-1 or 6-in-1";
-  }
-
-  if (disease.includes("hepatitis b")) return "Hepatitis B (HBV)";
-  if (disease.includes("tuberculosis")) return "Tuberculosis (BCG)";
-  if (disease.includes("rotavirus")) return "Rotavirus";
-  if (disease.includes("pneumococcal")) return "Pneumococcal";
-  if (disease.includes("influenza") || name.includes("seasonal flu")) return "Seasonal Flu";
-  if (disease.includes("meningococcal") && (name.includes(" bc") || name.endsWith("bc"))) return "Meningococcal BC";
-  if (disease.includes("measles") || disease.includes("mumps") || disease.includes("rubella")) return "Measles - Mumps - Rubella (MMR)";
-  if (disease.includes("japanese encephalitis")) return "Japanese Encephalitis B";
-  if (disease.includes("varicella") || disease.includes("chickenpox")) return "Varicella / Chickenpox";
-  if (disease.includes("hepatitis a")) return "Hepatitis A";
-  if (disease.includes("typhoid")) return "Typhoid";
-  if (disease.includes("meningococcal") && (name.includes(" ac") || name.endsWith("ac"))) return "Meningococcal AC";
-
-  return vac.vaccineName || vac.diseaseName || "Unknown"; // fallback để debug
-}
-
-export default function VaccinationSummaryPage({ babyName = "" }) {
+export default function VaccinationSummaryPage() {
   const navigate = useNavigate();
   const { childId: paramId } = useParams();
-  const { state } = useLocation();
-  const [sp] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
 
-  // Ưu tiên: param → query → state → fallback
-  const childId = paramId || sp.get("childId") || (state && state.childId) || 1;
+  const childId =
+    paramId || searchParams.get("childId") || location.state?.childId || 1;
 
-  const vaccinesCatalog = useMemo(
-    () => [
-      { name: "Hepatitis B (HBV)", doses: 5 },
-      { name: "Tuberculosis (BCG)", doses: 1 },
-      { name: "Rotavirus", doses: 3 },
-      { name: "5-in-1 or 6-in-1", doses: 4 },
-      { name: "Pneumococcal", doses: 4 },
-      { name: "Seasonal Flu", doses: 2 },
-      { name: "Meningococcal BC", doses: 2 },
-      { name: "Measles - Mumps - Rubella (MMR)", doses: 2 },
-      { name: "Japanese Encephalitis B", doses: 3 },
-      { name: "Varicella / Chickenpox", doses: 2 },
-      { name: "Hepatitis A", doses: 2 },
-      { name: "Meningococcal AC", doses: 1 },
-      { name: "Typhoid", doses: 1 },
-      { name: "Cervical cancer, Human Papillomavirus (HPV)", doses: 1 },
-    ],
-    []
-  );
+  const children = useSelector((state) => state.children?.list || []);
+  const currentChild = children.find((c) => c.id === Number(childId));
 
-  const [doseMap, setDoseMap] = useState({});
+  const [summaryData, setSummaryData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
+    const fetchSummary = async () => {
       try {
-       const { data: json } = await instance.get(`/api/children/${childId}/vaccines`);
-        const items = json?.data || [];
-
-        const tmp = {};
-        for (const it of items) {
-          const status = it?.status || it?.statusData?.keyMap || (it?.statusData?.valueEn || "").toLowerCase() || "unknown";
-          const vac = it?.Vaccine || {};
-          const key = mapToSummaryCategory(vac);
-          if (!tmp[key]) tmp[key] = [];
-          tmp[key].push({ status, time: it?.updateTime || "" });
+        setLoading(true);
+        const response = await axios.get(`/api/vaccines/child/${childId}`);
+        if (response.data.errCode === 0) {
+          // Sắp xếp các mũi theo doseNumber tăng dần
+          const sortedData = response.data.data.map((group) => ({
+            ...group,
+            doses: group.doses.sort((a, b) => a.doseNumber - b.doseNumber),
+          }));
+          setSummaryData(sortedData);
         }
-
-        const normalized = {};
-        for (const v of vaccinesCatalog) {
-          const slots = new Array(v.doses).fill("pending");
-          const fromApi = (tmp[v.name] || []).sort((a, b) => String(a.time).localeCompare(String(b.time)));
-          fromApi.slice(0, v.doses).forEach((rec, i) => (slots[i] = rec.status));
-          normalized[v.name] = slots;
-        }
-        setDoseMap(normalized);
-
-        // debug key chưa map
-        Object.keys(tmp).forEach((k) => {
-          if (!vaccinesCatalog.find((v) => v.name === k)) {
-            console.warn("[Summary] Unmapped category:", k, tmp[k]);
-          }
-        });
-      } catch (e) {
-        console.error("Failed to fetch vaccines", e);
+      } catch (err) {
+        console.error("Failed to load vaccination summary:", err);
+      } finally {
+        setLoading(false);
       }
-    }
-    load();
-  }, [childId, vaccinesCatalog]);
+    };
+
+    fetchSummary();
+  }, [childId]);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3, flexWrap: "wrap", gap: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <IconButton onClick={() => navigate(-1)} sx={{ width: 40, height: 40, borderRadius: "999px", background: "#FFF", boxShadow: "0 2px 6px rgba(0,0,0,.08)", "&:hover": { background: "#FFF" } }}>
-            <ArrowBackIosNewRoundedIcon fontSize="small" />
+    <Box sx={{ maxWidth: 1000, mx: "auto", p: 4 }}>
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+          <IconButton
+            onClick={() => navigate(-1)}
+            sx={{
+              bgcolor: "white",
+              boxShadow: 3,
+              "&:hover": { bgcolor: "#f9fafb" },
+            }}
+          >
+            <ArrowBackIosNewRoundedIcon />
           </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: "#374151" }}>
-            Vaccination Summary — Child #{String(childId)}
-          </Typography>
+
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: "#111827" }}>
+              Vaccination Summary
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Complete overview of all vaccine doses
+            </Typography>
+          </Box>
         </Box>
 
-        <Chip
-          label={
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{babyName || ""}</span>
-              <BabyChangingStationRoundedIcon className="text-rose-400" />
-            </div>
-          }
-          sx={{ bgcolor: "#BFEDE1", color: "#066C61", borderRadius: "18px", height: 40, px: 1.5, fontWeight: 700 }}
-        />
+        {currentChild && (
+          <Chip
+            icon={<BabyChangingStationRoundedIcon sx={{ color: "#EC4899" }} />}
+            label={
+              <Typography fontWeight={700}>
+                {currentChild.firstName} {currentChild.lastName}
+              </Typography>
+            }
+            sx={{
+              bgcolor: "#FCE7F3",
+              color: "#9D174D",
+              fontSize: "1rem",
+              height: 48,
+              px: 2,
+              borderRadius: 8,
+            }}
+          />
+        )}
       </Box>
 
-      <TableContainer component={Paper} sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-        <Table>
-          <TableHead sx={{ background: "#F3F4F6" }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700, fontSize: 16, color: "#374151", width: "50%" }}>Vaccine</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: 16, color: "#374151" }}>Status</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {vaccinesCatalog.map((v, i) => (
-              <TableRow key={v.name} sx={{ background: i % 2 === 0 ? "#E6F7FF" : "white", "&:hover": { background: "#DCFDF5" } }}>
-                <TableCell sx={{ fontWeight: 600, color: "#1E3A8A" }}>{v.name}</TableCell>
-                <TableCell>
-                  <Box sx={{ display: "flex", gap: 1 }}>
-                    {(doseMap[v.name] || new Array(v.doses).fill("pending")).map((status, index) => (
-                      <Dose key={index} index={index} status={status} />
-                    ))}
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Loading */}
+      {loading ? (
+        <Box display="flex" justifyContent="center" py={10}>
+          <CircularProgress size={60} thickness={5} />
+        </Box>
+      ) : (
+        <>
+          {/* Summary Table */}
+          <TableContainer
+            component={Paper}
+            elevation={6}
+            sx={{ borderRadius: 3, overflow: "hidden" }}
+          >
+            <Table>
+              <TableHead sx={{ bgcolor: "#009999" }}>
+                <TableRow>
+                  <TableCell
+                    sx={{ color: "white", fontWeight: 700, fontSize: "1.1rem" }}
+                  >
+                    Vaccine
+                  </TableCell>
+                  <TableCell
+                    align="center"
+                    sx={{ color: "white", fontWeight: 700, fontSize: "1.1rem" }}
+                  >
+                    Doses Status
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {summaryData.map((group, index) => (
+                  <TableRow
+                    key={group.vaccinationType}
+                    sx={{
+                      backgroundColor: index % 2 === 0 ? "#F8FAFC" : "white",
+                      "&:hover": { backgroundColor: "#EFF6FF" },
+                    }}
+                  >
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        color: "#1E293B",
+                      }}
+                    >
+                      <div>{group.vaccinationType}</div>
+                      {group.doses.length > 1 && (
+                        <Typography variant="caption" color="text.secondary">
+                          {group.doses.length} doses required
+                        </Typography>
+                      )}
+                    </TableCell>
 
-      {/* Legend */}
-      <Box sx={{ display: "flex", gap: 2, mt: 2, alignItems: "center" }}>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <Box sx={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid #07A66B", bgcolor: "#E8F8EF", display: "flex", alignItems: "center", justifyContent: "center", color: "#07A66B" }}>
-            <CheckRoundedIcon sx={{ fontSize: 14 }} />
+                    <TableCell align="center">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1.5,
+                          justifyContent: "center",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {group.doses.map((dose) => (
+                          <DosePill
+                            key={dose.id}
+                            status={dose.status}
+                            doseNumber={dose.doseNumber}
+                          />
+                        ))}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Legend */}
+          <Box
+            sx={{
+              mt: 4,
+              display: "flex",
+              gap: 4,
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  bgcolor: "#10B981",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <CheckRoundedIcon sx={{ color: "white", fontSize: 18 }} />
+              </Box>
+              <Typography fontWeight={600}>Injected</Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  bgcolor: "#F97316",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <CloseRoundedIcon sx={{ color: "white", fontSize: 18 }} />
+              </Box>
+              <Typography fontWeight={600}>Skipped</Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "3px solid #1E90FF",
+                  bgcolor: "#EFF6FF",
+                  color: "#1E40AF",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                1
+              </Box>
+              <Typography fontWeight={600}>Pending</Typography>
+            </Box>
           </Box>
-          <Typography variant="body2">Injected</Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <Box sx={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid #EF6C00", bgcolor: "#FFF3E0", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF6C00" }}>
-            <CloseRoundedIcon sx={{ fontSize: 14 }} />
+
+          {/* Footer */}
+          <Box sx={{ mt: 6, textAlign: "center", color: "text.secondary" }}>
+            <Typography variant="body2">
+              Last updated:{" "}
+              {new Date().toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </Typography>
           </Box>
-          <Typography variant="body2">Skipped</Typography>
-        </Box>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-          <Box sx={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid #1B9C9E", bgcolor: "#FFFBEF", display: "flex", alignItems: "center", justifyContent: "center", color: "#1B9C9E", fontSize: 12, fontWeight: 700 }}>1</Box>
-          <Typography variant="body2">Pending</Typography>
-        </Box>
-      </Box>
+        </>
+      )}
     </Box>
   );
 }

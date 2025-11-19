@@ -53,4 +53,20 @@ export const updateChildMilkLogService = async (
   }
   return d.data;
 };
+export const getChildMilkLogsByDateRangeService = async (childId, fromDate, toDate) => {
+  const res = await axios.get(`/api/children/${childId}/milk-logs-range`, { 
+    params: { fromDate, toDate }, 
+  });
 
+  const d = res?.data;
+  if (!d || d.errCode !== 0) {
+    throw new Error(d?.errMessage || "Load milk logs by date range failed");
+  }
+
+  return d.data || {
+    date: null,
+    totalToday: 0,
+    logs: [],
+    last7Days: [],
+  };
+};

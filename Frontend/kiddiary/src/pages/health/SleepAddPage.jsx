@@ -12,6 +12,10 @@ import BabyChangingStationRoundedIcon from "@mui/icons-material/BabyChangingStat
 import WbTwilightRoundedIcon from "@mui/icons-material/WbTwilightRounded";
 import WbSunnyRoundedIcon from "@mui/icons-material/WbSunnyRounded";
 
+import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { createSleepLog } from "../../store/slice/sleepSlice";
+
 /** Utility */
 function toMinutes(hhmm) {
   if (!hhmm) return null;
@@ -20,21 +24,16 @@ function toMinutes(hhmm) {
 }
 function minutesSpan(start, end) {
   if (start == null || end == null) return 0;
-  // cho phép băng qua nửa đêm
-  if (end < start) return 24 * 60 - start + end;
+  if (end < start) return 24 * 60 - start + end; // qua nửa đêm
   return end - start;
 }
 
-/** Phân loại night/day
- *  - Nếu phần lớn thời gian nằm trong [19:00, 07:00] hoặc end < start (qua nửa đêm) => Night
- *  - Ngược lại => Day
- */
+/** Phân loại night/day cho UI */
 function classifySleep(startMin, endMin) {
   if (startMin == null || endMin == null) return null;
   const span = minutesSpan(startMin, endMin);
   const windowNightStart = 19 * 60; // 19:00
   const windowNightEnd = 7 * 60; // 07:00 (qua ngày)
-  // tính số phút là ban đêm, xấp xỉ
   let minutesNight = 0;
 
   const addNightOverlap = (s, e) => {
@@ -51,27 +50,27 @@ function classifySleep(startMin, endMin) {
   if (endMin >= startMin) {
     addNightOverlap(startMin, endMin);
   } else {
-    // chia 2 đoạn nếu qua nửa đêm
     addNightOverlap(startMin, 24 * 60);
     addNightOverlap(endMin, endMin + 24 * 60);
   }
 
   const ratioNight = span ? minutesNight / span : 0;
-  // nếu qua nửa đêm hoặc tỷ lệ đêm >= 0.5 coi là Night
   if (endMin < startMin || ratioNight >= 0.5) return "night";
   return "day";
 }
 
-export default function SleepAddPage({
-  onBack,
-  onCancel,
-  onSave,
-  babyName = "Yến Nhi",
-}) {
-  const [date, setDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  });
+export default function SleepAddPage() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { childId } = useParams(); // /home/health/sleep/:childId/new
+
+  const { list: children } = useSelector((s) => s.children || {});
+  const child = children?.find((c) => String(c.id) === String(childId));
+  const babyName = child
+    ? `${child.firstName.trim()} ${child.lastName}`
+    : "Baby";
+
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [start, setStart] = useState("21:00");
   const [end, setEnd] = useState("05:00");
   const [notes, setNotes] = useState("");
@@ -79,7 +78,12 @@ export default function SleepAddPage({
 
   const startMin = useMemo(() => toMinutes(start), [start]);
   const endMin = useMemo(() => toMinutes(end), [end]);
-  const type = useMemo(() => classifySleep(startMin, endMin), [startMin, endMin]);
+  const type = useMemo(
+    () => classifySleep(startMin, endMin),
+    [startMin, endMin]
+  );
+
+  const { loading, error } = useSelector((s) => s.childSleep || {});
 
   const ampm = (hhmm) => {
     if (!hhmm) return "";
@@ -88,21 +92,64 @@ export default function SleepAddPage({
   };
 
   const toggleTag = (t) =>
-    setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+    setTags((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    );
 
   const qualitySuggestions = ["Good sleep", "Fussy", "Startled"];
 
-  const handleSave = () => {
+  // map tag → ENUM trong DB
+  const mapQuality = () => {
+    if (tags.includes("Fussy")) return "FUSSY";
+    if (tags.includes("Startled")) return "STARTLED";
+    return "GOOD"; // default
+  };
+
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  const handleSave = async () => {
+    if (!childId) {
+      alert("Missing childId in URL");
+      return;
+    }
+    if (!date || !start || !end) {
+      alert("Please fill date, start time and end time");
+      return;
+    }
+
+    // build startTime / endTime ISO
+    const startDate = new Date(`${date}T${start}:00`);
+    let endDate = new Date(`${date}T${end}:00`);
+    // nếu qua nửa đêm, cộng thêm 1 ngày
+    if (endDate <= startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+
     const payload = {
-      date,
-      start,
-      end,
-      type, // 'night' | 'day'
+      sleepDate: date,
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
+      quality: mapQuality(), // "GOOD" | "FUSSY" | "STARTLED"
       notes,
-      tags,
-      durationMinutes: minutesSpan(startMin, endMin),
+      // duration backend tự tính, nên có cũng được, không có cũng không sao
+      // duration: minutesSpan(startMin, endMin),
     };
-    if (onSave) onSave(payload);
+
+    try {
+      await dispatch(
+        createSleepLog({
+          childId,
+          payload,
+        })
+      ).unwrap();
+
+      navigate(`/home/health/sleep/${childId}`);
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || "Create sleep log failed");
+    }
   };
 
   return (
@@ -110,7 +157,7 @@ export default function SleepAddPage({
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <IconButton
-          onClick={onBack || onCancel}
+          onClick={handleBack}
           sx={{
             width: 40,
             height: 40,
@@ -144,6 +191,13 @@ export default function SleepAddPage({
           }}
         />
       </div>
+
+      {/* Error message nếu có */}
+      {error && (
+        <Typography sx={{ mb: 2, color: "red" }}>
+          {typeof error === "string" ? error : "Request failed"}
+        </Typography>
+      )}
 
       {/* Form block */}
       <Box
@@ -194,8 +248,6 @@ export default function SleepAddPage({
               pr: 1,
             }}
           >
-            
-
             <Chip
               icon={
                 type === "night" ? (
@@ -285,7 +337,6 @@ export default function SleepAddPage({
               minRows={5}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder=""
               sx={{
                 bgcolor: "white",
                 borderRadius: 2,
@@ -295,7 +346,15 @@ export default function SleepAddPage({
           </Box>
 
           {/* Suggestions */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "wrap",
+              mb: 2,
+            }}
+          >
             {qualitySuggestions.map((q) => (
               <Button
                 key={q}
@@ -308,13 +367,14 @@ export default function SleepAddPage({
                   fontWeight: 700,
                   bgcolor: tags.includes(q) ? "#2CC1AE" : "#F3F4F6",
                   color: tags.includes(q) ? "white" : "#374151",
-                  "&:hover": { bgcolor: tags.includes(q) ? "#22B39E" : "#E5E7EB" },
+                  "&:hover": {
+                    bgcolor: tags.includes(q) ? "#22B39E" : "#E5E7EB",
+                  },
                 }}
               >
                 {q}
               </Button>
             ))}
-           
           </Box>
         </Box>
       </Box>
@@ -324,6 +384,7 @@ export default function SleepAddPage({
         <Button
           onClick={handleSave}
           variant="contained"
+          disabled={loading}
           sx={{
             bgcolor: "#22C55E",
             fontWeight: 800,
@@ -332,10 +393,10 @@ export default function SleepAddPage({
             "&:hover": { bgcolor: "#16A34A" },
           }}
         >
-          Save
+          {loading ? "Saving..." : "Save"}
         </Button>
         <Button
-          onClick={onCancel || onBack}
+          onClick={handleBack}
           variant="contained"
           sx={{
             bgcolor: "#111827",

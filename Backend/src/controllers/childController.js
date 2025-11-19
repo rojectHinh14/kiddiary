@@ -109,6 +109,69 @@ const getVaccinesByChild = async (req, res) => {
   }
 };
 
+const updateVaccineDoseStatus = async (req, res) => {
+  try {
+    const data = req.body;
+    const result = await childService.updateVaccineDoseStatus(data);
+
+    if (result.errCode !== 0) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in updateVaccineDoseStatus controller:", error);
+    return res.status(500).json({
+      errCode: 1,
+      errMessage: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+const getVaccineDosesByVaccine = async (req, res) => {
+  try {
+    const { childId } = req.params;
+    const result = await childService.getVaccineDosesByVaccine(Number(childId));
+
+    if (result.errCode !== 0) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getVaccineDosesByVaccine controller:", error);
+    return res.status(500).json({
+      errCode: 1,
+      errMessage: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+const getVaccineWithDoses = async (req, res) => {
+  try {
+    const { childId, vaccineId } = req.params;
+    const result = await childService.getVaccineWithDoses(
+      Number(childId),
+      Number(vaccineId)
+    );
+
+    if (result.errCode !== 0) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getVaccineWithDoses controller:", error);
+    return res.status(500).json({
+      errCode: 1,
+      errMessage: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 const getChildVaccineDetail = async (req, res) => {
   try {
     const { childId, vaccineId } = req.params;
@@ -453,12 +516,42 @@ export const getSleepWeek = async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 };
+const getChildMilkLogsByDateRange = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { childId } = req.params;
+    const { fromDate, toDate } = req.query; 
+
+    if (!fromDate || !toDate) {
+      return res.status(400).json({
+        errCode: 1,
+        errMessage: "Missing required query parameters: fromDate and toDate",
+      });
+    }
+
+    const result = await childService.getChildMilkLogsByDateRange(
+      userId, 
+      childId, 
+      fromDate, 
+      toDate
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in getChildMilkLogsByDateRange:", error);
+    return res.status(500).json({
+      errCode: -1,
+      errMessage: "Server error",
+    });
+  }
+};
 export default {
   getChildrenByUser,
   addChild,
   updateChild,
   deleteChild,
   getVaccinesByChild,
+  getChildMilkLogsByDateRange,
   getChildVaccineDetail,
   updateChildVaccineStatus,
   getInjectedVaccines,
@@ -476,4 +569,7 @@ export default {
   updateSleep,
   deleteSleep,
   getSleepWeek,
+  updateVaccineDoseStatus,
+  getVaccineDosesByVaccine,
+  getVaccineWithDoses,
 };

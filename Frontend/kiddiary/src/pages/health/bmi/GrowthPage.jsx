@@ -1,3 +1,4 @@
+// src/pages/health/growth/GrowthPage.jsx
 import React, { useState, useEffect } from "react";
 import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
@@ -23,6 +24,7 @@ import {
   loadChildHistory,
   updateOneHistory,
 } from "../../../store/slice/childHistoorySlice";
+import { getChildrenByUser } from "../../../services/childService"; // 🔹 thêm
 
 const PAGE_SIZE = 5; // số bản ghi mỗi trang
 
@@ -34,6 +36,7 @@ export default function GrowthPage() {
   const [page, setPage] = useState(1);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [babyName, setBabyName] = useState(""); // 🔹 tên bé
 
   const {
     list: historyRaw,
@@ -46,6 +49,27 @@ export default function GrowthPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ date: "", height: "", weight: "" });
+
+  // 🔹 Lấy tên bé từ backend theo childId
+  useEffect(() => {
+    const fetchChildName = async () => {
+      if (!childId) return;
+      try {
+        const children = await getChildrenByUser(); // gọi /api/children
+        const found = children.find((c) => String(c.id) === String(childId));
+        if (found) {
+          setBabyName(`${found.firstName} ${found.lastName}`.trim());
+        } else {
+          setBabyName("Unknown child");
+        }
+      } catch (err) {
+        console.error("Error fetching children in GrowthPage:", err);
+        setBabyName("Unknown child");
+      }
+    };
+
+    fetchChildName();
+  }, [childId]);
 
   // load history khi vào trang / đổi childId
   useEffect(() => {
@@ -94,7 +118,6 @@ export default function GrowthPage() {
 
   const latest = sortedHistory[0] || null;
 
-  // ====== Phần còn lại của code sẽ hoạt động chính xác ======
   const latestDateLabel = latest
     ? new Date(latest.date).toLocaleDateString("en-US", {
         weekday: "long",
@@ -183,6 +206,24 @@ export default function GrowthPage() {
           <Typography variant="h5" sx={{ fontWeight: 800, color: "#374151" }}>
             Growth Overview for
           </Typography>
+          <Chip
+            label={
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">
+                  {babyName || "Loading..."}
+                </span>
+                <ChildCareRoundedIcon className="text-rose-400" />
+              </div>
+            }
+            sx={{
+              bgcolor: "#BFEDE1",
+              color: "#066C61",
+              borderRadius: "18px",
+              height: 40,
+              px: 1.5,
+              fontWeight: 700,
+            }}
+          />
         </div>
 
         <Button
@@ -339,14 +380,13 @@ export default function GrowthPage() {
       {/* History list */}
       <div className="space-y-3">
         {pagedData
-          .slice() // Tạo một bản sao nông (shallow copy) của mảng
-          .reverse() // Đảo ngược thứ tự của bản sao
+          .slice()
+          .reverse()
           .map((item) => (
             <div
               key={item.id}
               className="flex flex-wrap justify-between items-center bg-[#8FC9BF] text-white/90 rounded-xl px-4 py-2 shadow-sm"
             >
-              {/* Nội dung item */}
               <div className="font-medium text-white">
                 <span className="font-semibold">Date:</span>{" "}
                 {new Date(item.date).toLocaleDateString("en-US", {
@@ -364,7 +404,6 @@ export default function GrowthPage() {
               </div>
 
               <div className="flex gap-2">
-                {/* Nút Edit */}
                 <Button
                   size="small"
                   onClick={() => handleEdit(item)}
@@ -380,7 +419,6 @@ export default function GrowthPage() {
                 >
                   Edit
                 </Button>
-                {/* Nút Delete */}
                 <Button
                   size="small"
                   onClick={() => handleDelete(item)}

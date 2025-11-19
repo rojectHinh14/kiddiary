@@ -367,20 +367,11 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           title="Sleep Tracker"
           icon={<BedtimeRoundedIcon />}
           bg="#F3D2C9"
-          onClick={onOpenSleep}
+          onClick={() => navigate(`/home/health/sleep/${selectedChild?.id}`)}
         />
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Tile
-          title="Teething Tracker"
-          icon={<PsychologyRoundedIcon />}
-          bg="#FFE7D1"
-        />
-        <Tile
-          title="Mood Tracker"
-          icon={<PsychologyRoundedIcon />}
-          bg="#CFEBD7"
-        />
+        
       </div>
       <ChatBox />
     </div>

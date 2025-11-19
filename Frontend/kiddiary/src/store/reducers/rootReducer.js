@@ -10,6 +10,7 @@ import vaccinationSlice from "../slice/vaccinationSlice";
 import children from "../slice/childrenSlice";
 import childHistorySlice from "../slice/childHistoorySlice"; 
 import childMilk from "../slice/childMilkSlice"
+import sleepReducer from "../slice/sleepSlice"
 
 const persistCommonConfig = {
   storage,
@@ -52,6 +53,14 @@ const childMilkPersist = persistReducer(
   },
   childMilk
 );
+const sleepPersist = persistReducer(
+  {
+    key: "sleep",
+    storage,
+    whitelist: ["week", "history"],  
+  },
+  sleepReducer
+);
 
 const rootReducer = combineReducers({
   user: persistReducer(userPersistConfig, userReducer),
@@ -60,7 +69,8 @@ const rootReducer = combineReducers({
   vaccination : vaccinationPersist,
  childHistory: childHistoryPersist,
   children : childrenPersist,
-  childMilk : childMilkPersist
+  childMilk : childMilkPersist,
+  childSleep: sleepPersist,  
 });
 
 export default rootReducer;
