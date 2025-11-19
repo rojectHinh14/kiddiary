@@ -1,4 +1,4 @@
-import chatbotService from "../services/chatbotService.js";
+import SearchbarService from "../services/SearchbarService.js";
 
 /**
  * Search media/albums theo query string
@@ -19,7 +19,7 @@ const searchMedia = async (req, res) => {
     console.log(`🔍 User ${userId} searching: ${q}`);
 
     // Sử dụng chatbotService để query database
-    const results = await chatbotService.processUserQuery(userId, q);
+    const results = await SearchbarService.processUserQuery(userId, q);
 
     return res.status(200).json({
       errCode: 0,
