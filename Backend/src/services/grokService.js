@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const GROK_API_KEY = process.env.GROK_API_KEY; 
-const GROK_MODEL = "grok-4"; 
+const GROK_API_KEY = process.env.GROK_API_KEY;
+const GROK_MODEL = "grok-4";
 const GROK_API_URL = "https://api.x.ai/v1/chat/completions";
 
 if (!GROK_API_KEY) {
@@ -24,7 +24,7 @@ export async function askGrok(prompt) {
       {
         role: "system",
         content:
-          "You are a helpful assistant for parents. Answer in Vietnamese, friendly and easy to understand.",
+          "You are a helpful assistant for parents. Answer in English, in a friendly and easy-to-understand way.",
       },
       {
         role: "user",
@@ -44,7 +44,7 @@ export async function askGrok(prompt) {
   const reply = res.data?.choices?.[0]?.message?.content?.trim();
 
   if (!reply) {
-    throw new Error("Grok trả về rỗng hoặc sai format");
+    throw new Error("Grok returned an empty or invalid response format");
   }
 
   return reply;

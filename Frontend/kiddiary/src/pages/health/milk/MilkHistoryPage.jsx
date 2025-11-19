@@ -15,7 +15,6 @@ import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
 
 import {
-  loadChildMilkLogs,
   updateMilkLog,
   deleteMilkLog,
   loadChildMilkLogsByDateRange,
@@ -40,17 +39,15 @@ export default function MilkHistoryPage() {
   const [form, setForm] = useState({ time: "", amount: "", note: "" });
 
   const { logs, loading, error } = useSelector((state) => state.childMilk);
-
-  // 🔴 LƯU Ý: Nếu muốn load theo range FROM-TO, bạn cần sửa dòng dưới thành:
-  // dispatch(loadChildMilkLogs({ childId, fromDate: from, toDate: to }));
-  // và sửa childMilkSlice để nhận 2 tham số này.
-  // Hiện tại, code vẫn đang chạy theo logic cũ (chỉ dùng ngày FROM)
  useEffect(() => {
   if (!childId || !from || !to) return;
-  if (from > to) return; // hoặc swap from/to tuỳ bạn
+  if (from > to) return; 
 
   dispatch(loadChildMilkLogsByDateRange({ childId, fromDate: from, toDate: to }));
 }, [childId, from, to, dispatch]);
+
+
+
 
 
   // group logs theo ngày

@@ -17,7 +17,6 @@
 
     return (
       <section className="bg-white rounded-[20px] shadow-[0_6px_28px_rgba(0,0,0,0.06)] p-6 md:p-8">
-        {/* Header */}
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -45,7 +44,6 @@
               <MoreHorizontal size={18} />
             </button>
 
-            {/* Backdrop để đóng menu khi click ra ngoài (không cần document listeners) */}
             {menuOpen && (
               <div className="fixed inset-0 z-[40]" onClick={() => setMenuOpen(false)} />
             )}
@@ -79,7 +77,7 @@
                   onClick={() => {
                     console.log("[MomentCard] click Delete menuitem", { id });
                     setMenuOpen(false);
-                    setConfirmOpen(true); // mở confirm ngay, không defer
+                    setConfirmOpen(true); 
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-b-2xl hover:bg-red-50 text-[14px] text-red-600"
                 >

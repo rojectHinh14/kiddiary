@@ -4,13 +4,9 @@ import {
   Avatar,
   Card,
   CardContent,
-  Chip,
-  Divider,
-  Grid,
-  IconButton,
-  Stack,
   Typography,
   Tooltip,
+  IconButton,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -40,7 +36,7 @@ const Stat = ({ label, value, unit }) => (
           color: "#16837B",
         }}
       >
-        {value}
+        {value ?? "--"}
       </Typography>
       {unit && (
         <Typography sx={{ fontSize: 18, mb: "4px", color: "#6b7280" }}>
@@ -64,7 +60,9 @@ const Field = ({ label, value }) => (
         boxShadow: "0 2px 0 rgba(0,0,0,0.06)",
       }}
     >
-      <span style={{ color: "#16837B", fontWeight: 700 }}>{value}</span>
+      <span style={{ color: "#16837B", fontWeight: 700 }}>
+        {value ?? "--"}
+      </span>
     </div>
   </div>
 );
@@ -150,18 +148,32 @@ const calculateWeeks = (dob) => {
 };
 
 const getHeightInCm = (height) => {
-  let heightCm = height;
-  if (heightCm < 10) {
-    heightCm *= 100; // Assume it's in meters if <10
-  }
-  return heightCm;
+  if (height == null) return null;
+  const h = Number(height);
+  if (!Number.isFinite(h) || h <= 0) return null;
+
+  // Nếu > 3 thì coi là cm (50, 60, 100...)
+  // Nếu <= 3 thì coi là mét (0.65, 1.2...)
+  if (h > 3) return h;     // cm
+  return h * 100;          // m -> cm
 };
 
 const calculateBMI = (weight, height) => {
-  const heightCm = getHeightInCm(height);
-  const heightM = heightCm / 100;
-  return (weight / (heightM * heightM)).toFixed(1);
+  if (weight == null || height == null) return null;
+
+  const w = Number(weight);
+  if (!Number.isFinite(w) || w <= 0) return null;
+
+  const hCm = getHeightInCm(height);
+  if (!hCm) return null;
+
+  const hM = hCm / 100;
+  const bmi = w / (hM * hM);
+
+  if (!Number.isFinite(bmi)) return null;
+  return Number(bmi.toFixed(1));      
 };
+
 
 const getAvatarSrc = (avatarUrl) => {
   if (!avatarUrl) return undefined;
@@ -169,6 +181,7 @@ const getAvatarSrc = (avatarUrl) => {
     ? avatarUrl
     : `http://localhost:8080${avatarUrl}`;
 };
+
 // ---------- main component ----------
 export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
   const [children, setChildren] = useState([]);
@@ -226,20 +239,23 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
     );
   }
 
+  const latestHistory = selectedChild.histories?.[0] || {};
+  const heightCm = getHeightInCm(latestHistory.height);
+  const bmiValue = calculateBMI(latestHistory.weight, latestHistory.height);
+
   const baby = {
-    name: `${selectedChild.firstName.trim()} ${selectedChild.lastName}`,
-    dob: new Date(selectedChild.dob).toLocaleDateString("vi-VN"),
-    age: calculateAge(selectedChild.dob),
-    weeks: calculateWeeks(selectedChild.dob),
-    weight: selectedChild.histories[0]?.weight,
-    height: getHeightInCm(selectedChild.histories[0]?.height),
-    bmi: calculateBMI(
-      selectedChild.histories[0]?.weight,
-      selectedChild.histories[0]?.height
-    ),
+    name: `${(selectedChild.firstName || "").trim()} ${
+      selectedChild.lastName || ""
+    }`.trim(),
+    dob: selectedChild.dob
+      ? new Date(selectedChild.dob).toLocaleDateString("vi-VN")
+      : "--",
+    age: selectedChild.dob ? calculateAge(selectedChild.dob) : "--",
+    weeks: selectedChild.dob ? calculateWeeks(selectedChild.dob) : "--",
+    weight: latestHistory.weight ?? "--",
+    height: heightCm ?? "--",
+    bmi: bmiValue ?? "--",
   };
-  console.log("check weight: ", baby.weight);
-  console.log(baby.height);
 
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-white">
@@ -254,13 +270,16 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
         }}
       >
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Grid
-            container
-            spacing={20}
-            alignItems="flex-start"
-            sx={{ flexWrap: { xs: "wrap", md: "nowrap" } }}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 40,
+              alignItems: "flex-start",
+            }}
           >
-            <Grid item xs={12} md={6}>
+            {/* Left side: baby info */}
+            <div style={{ flex: "1 1 280px", minWidth: 260 }}>
               <div className="flex items-center gap-3 md:gap-4">
                 <Avatar
                   sx={{ width: 44, height: 44 }}
@@ -279,7 +298,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
                     fontWeight: 700,
                   }}
                 >
-                  <span>{baby.name}</span>
+                  <span>{baby.name || "Baby"}</span>
                   <BabyChangingStationRoundedIcon sx={{ color: "#F87171" }} />
                 </div>
                 <Tooltip title="Switch baby">
@@ -293,8 +312,9 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
                 <Field label="Age:" value={baby.age} />
                 <Field label="Weeks:" value={baby.weeks} />
               </div>
-            </Grid>
-            <Grid item xs={12} md={6}>
+            </div>
+
+            <div style={{ flex: "1 1 260px", minWidth: 260 }}>
               <div className="grid grid-cols-2 gap-6 md:gap-8">
                 <div className="flex items-start gap-3">
                   <ScaleRoundedIcon sx={{ mt: "2px", color: "#6b7280" }} />
@@ -309,12 +329,11 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
                   <Stat label="BMI" value={baby.bmi} />
                 </div>
               </div>
-            </Grid>
-          </Grid>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Dropdown Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -334,7 +353,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
             onClick={() => handleSelectChild(child)}
             selected={selectedChild.id === child.id}
           >
-            {`${child.firstName.trim()} ${child.lastName}`}
+            {`${(child.firstName || "").trim()} ${child.lastName || ""}`.trim()}
           </MenuItem>
         ))}
       </Menu>
@@ -358,11 +377,13 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <Tile
-        title="Weight, Height"
-        icon={<ScaleRoundedIcon />}
-        bg="#BFEDE1"
-        onClick={() => navigate(`/home/health/growth/${selectedChild?.id}`)}
-      />
+          title="Weight, Height"
+          icon={<ScaleRoundedIcon />}
+          bg="#BFEDE1"
+          onClick={() =>
+            navigate(`/home/health/growth/${selectedChild?.id}`)
+          }
+        />
         <Tile
           title="Sleep Tracker"
           icon={<BedtimeRoundedIcon />}
@@ -370,9 +391,7 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
           onClick={() => navigate(`/home/health/sleep/${selectedChild?.id}`)}
         />
       </div>
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-      </div>
+
       <ChatBox />
     </div>
   );

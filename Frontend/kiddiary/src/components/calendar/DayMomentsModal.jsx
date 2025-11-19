@@ -1,15 +1,11 @@
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 
-/**
- * items: [{ id, description, images: [url,...] }]
- * Trang này CHỈ hiển thị, không cho sửa/xoá
- */
 export default function DayMomentsModal({ date, items, onClose }) {
-  // nếu muốn có thể giữ 1 state copy, nhưng ở đây chỉ đọc nên không cần chỉnh gì
   const [list, setList] = useState([]);
 
   useEffect(() => {
+    console.log("items from DB: ", items);
     setList(items || []);
   }, [items]);
 
@@ -20,15 +16,12 @@ export default function DayMomentsModal({ date, items, onClose }) {
       role="dialog"
       onClick={onClose}
     >
-      {/* backdrop */}
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
 
-      {/* panel */}
       <div
         className="relative w-[min(1000px,95vw)] max-h-[85vh] overflow-auto rounded-2xl bg-white shadow-xl border border-black/10 p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* header */}
         <div className="flex items-center justify-between gap-4 pb-4 border-b">
           <div>
             <div className="text-xs uppercase text-gray-500">Moments on</div>
@@ -44,7 +37,6 @@ export default function DayMomentsModal({ date, items, onClose }) {
           </button>
         </div>
 
-        {/* body */}
         {list.length === 0 ? (
           <div className="py-12 text-center text-gray-500">
             No moments yet for this day.
@@ -62,9 +54,9 @@ export default function DayMomentsModal({ date, items, onClose }) {
                     <div className="text-sm font-semibold text-gray-700">
                       Moment #{m.id}
                     </div>
-                    {m.description ? (
+                    {m.caption ? (
                       <p className="text-sm leading-relaxed text-gray-900 whitespace-pre-line">
-                        {m.description}
+                        {m.caption  }
                       </p>
                     ) : (
                       <p className="text-sm italic text-gray-400">
@@ -73,13 +65,12 @@ export default function DayMomentsModal({ date, items, onClose }) {
                     )}
                   </div>
 
-                  {/* right: images */}
                   <div className="rounded-lg bg-white p-2 border">
                     <div className="text-xs text-gray-500 mb-2">
                       Images ({m.images?.length || 0})
                     </div>
                     {m.images?.length ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <div className="">
                         {m.images.map((src, i) => (
                           <div
                             key={i}
