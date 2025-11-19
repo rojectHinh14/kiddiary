@@ -18,7 +18,7 @@ export default function AlbumDetail() {
 
   // select mode
   const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState(() => new Set()); // Set<string>
+  const [selected, setSelected] = useState(() => new Set()); 
 
   const mapResponse = (a) => ({
     ...a,
@@ -51,7 +51,6 @@ export default function AlbumDetail() {
     refetch();
   }, [refetch]);
 
-  // ESC to exit select mode
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") {
@@ -68,7 +67,8 @@ export default function AlbumDetail() {
     await refetch();
   };
 
-  // --- select helpers (dùng string id để so sánh ổn định) ---
+  console.log(album);
+
   const toggleSelect = (mediaId) => {
     const key = String(mediaId);
     setSelected((prev) => {
@@ -86,7 +86,6 @@ export default function AlbumDetail() {
 
   const clearSelect = () => setSelected(new Set());
 
-  // Xóa theo selected (1 hoặc nhiều đều OK)
   const handleRemove = async () => {
     if (selected.size === 0) return;
 
@@ -253,7 +252,7 @@ export default function AlbumDetail() {
             {album.title}
           </h1>
 
-          <p className="mt-2 text-gray-600 max-w-3xl">{album.description}</p>
+          <p className="mt-2 text-gray-600 max-w-3xl">{album.albumName  }</p>
         </div>
       </section>
 

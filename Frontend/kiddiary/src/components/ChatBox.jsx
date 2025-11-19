@@ -55,9 +55,30 @@ export default function ChatBox({
         }
       );
 
-      const botReply =
-        res.data.reply || "Xin lỗi, mình không nhận được phản hồi.";
+      let botReply = res.data.reply ?? "Xin lỗi, mình không nhận được phản hồi.";
       const childrenCount = res.data.childrenCount ?? null;
+
+      // Đảm bảo botReply LUÔN là string
+      if (typeof botReply !== "string") {
+        try {
+          botReply = JSON.stringify(botReply, null, 2);
+        } catch {
+          botReply = String(botReply);
+        }
+      }
+
+      // Nếu botReply là JSON string (kiểu {"provider":"gemini","reply":"..."})
+      try {
+        const parsed = JSON.parse(botReply);
+        if (parsed && typeof parsed.reply === "string") {
+          botReply = parsed.reply;
+        }
+      } catch {
+        // không phải JSON string thì thôi
+      }
+
+      // Đổi "\n" (backslash-n) thành xuống dòng thật
+      botReply = botReply.replace(/\\n/g, "\n");
 
       setMessages((prev) => [
         ...prev,
@@ -84,6 +105,21 @@ export default function ChatBox({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Helper đảm bảo ReactMarkdown luôn nhận string
+  const renderBotMarkdown = (text) => {
+    let content = text;
+
+    if (typeof content !== "string") {
+      try {
+        content = JSON.stringify(content, null, 2);
+      } catch {
+        content = String(content ?? "");
+      }
+    }
+
+    return <ReactMarkdown>{content}</ReactMarkdown>;
+  };
+
   // Khu vực hiển thị nội dung chat (dùng chung cho 2 layout)
   const MessagesArea = () => (
     <div className="p-4 flex-1 overflow-y-auto text-sm text-gray-700 space-y-2">
@@ -100,11 +136,7 @@ export default function ChatBox({
             <div className="bg-gray-100 rounded-xl px-3 py-2 max-w-[90%]">
               <span className="font-semibold">Bot:</span>{" "}
               <div className="prose prose-sm whitespace-pre-wrap">
-                <ReactMarkdown>
-                  {typeof msg.text === "string"
-                    ? msg.text
-                    : JSON.stringify(msg.text ?? "")}
-                </ReactMarkdown>
+                {renderBotMarkdown(msg.text)}
               </div>
             </div>
           </div>
@@ -183,7 +215,7 @@ export default function ChatBox({
                 onClick={() => setIsExpanded(true)}
                 className="text-xs bg-white/15 hover:bg-white/25 rounded-full px-2 py-1"
               >
-                Mở rộng
+                Expand
               </button>
             </div>
 
@@ -241,7 +273,7 @@ export default function ChatBox({
                   onClick={() => setIsExpanded(false)}
                   className="text-xs bg-white/15 hover:bg-white/25 rounded-full px-2 py-1"
                 >
-                  Thu nhỏ
+                  Minimize
                 </button>
                 {/* Đóng hẳn */}
                 <button

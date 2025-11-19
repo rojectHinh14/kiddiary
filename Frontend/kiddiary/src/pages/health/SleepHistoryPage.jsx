@@ -212,7 +212,7 @@ export default function SleepHistoryPage({ babyName = "Yến Nhi" }) {
 
       {/* Loading / error */}
       {loading && (
-        <p className="text-sm text-gray-500 mb-2">Đang tải dữ liệu...</p>
+        <p className="text-sm text-gray-500 mb-2">Wait for Loading</p>
       )}
       {error && (
         <p className="text-sm text-red-500 mb-2">
@@ -225,8 +225,8 @@ export default function SleepHistoryPage({ babyName = "Yến Nhi" }) {
       <div className="space-y-5">
         {(!days || days.length === 0) && !loading && !error && (
           <p className="text-sm text-gray-500">
-            Không có bản ghi ngủ trong khoảng ngày đã chọn.
-          </p>
+
+There are no sleep records for the selected date range.          </p>
         )}
 
         {days.map((d, idx) => (

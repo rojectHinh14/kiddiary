@@ -19,11 +19,9 @@ const initialState = {
 
 export const loadChildMilkLogs = createAsyncThunk(
   "childMilk/load",
-  // 🔴 Nếu muốn dùng range (from, to), bạn cần thay { childId, date } thành { childId, fromDate, toDate }
   async ({ childId, date }, { rejectWithValue }) => {
     try {
       const data = await getChildMilkLogsService(childId, date);
-      // data.date là ISO string từ backend (ngày đang xem)
       return {
         childId,
         date: date || (data.date && data.date.slice(0, 10)) || null,
@@ -35,14 +33,12 @@ export const loadChildMilkLogs = createAsyncThunk(
   }
 );
 
-// CREATE log
 export const createMilkLog = createAsyncThunk(
   "childMilk/createOne",
   async ({ childId, payload }, { getState, dispatch, rejectWithValue }) => {
     try {
       await createChildMilkLogService(childId, payload);
 
-      // Sau khi tạo xong, reload lại danh sách theo ngày tương ứng
       const state = getState().childMilk;
       const dateFromPayload =
         payload.feedingAt && payload.feedingAt.slice(0, 10);
@@ -56,7 +52,6 @@ export const createMilkLog = createAsyncThunk(
   }
 );
 
-// UPDATE log
 export const updateMilkLog = createAsyncThunk(
   "childMilk/updateOne",
   async ({ childId, milkLogId, payload }, { getState, dispatch, rejectWithValue }) => {
@@ -81,7 +76,6 @@ export const loadChildMilkLogsByDateRange = createAsyncThunk(
   "childMilk/loadRange",
   async ({ childId, fromDate, toDate }, { rejectWithValue }) => {
     try {
-      // Gọi service mới
       const data = await getChildMilkLogsByDateRangeService(childId, fromDate, toDate);
       return {
         childId,
@@ -178,7 +172,7 @@ const childMilkSlice = createSlice({
 
       state.childId = childId ?? state.childId;
       state.date = date ?? state.date;
-      state.logs = data?.logs || [];     // logs cho cả range
+      state.logs = data?.logs || [];     
       state.totalToday = data?.totalToday || 0;
       state.last7Days = data?.last7Days || [];
     })

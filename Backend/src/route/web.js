@@ -213,6 +213,10 @@ let initWebRoutes = (app) => {
     "/child/:childId/vaccine/:vaccineId",
     childController.getVaccineWithDoses
   );
+   router.get(
+  "/api/children/:childId/milk-logs-range",
+  verifyToken,
+  childController.getChildMilkLogsByDateRange)
 
   return app.use("/", router);
 };

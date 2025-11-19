@@ -1,3 +1,4 @@
+// src/services/geminiService.js
 import axios from "axios";
 import dotenv from "dotenv";
 
@@ -6,6 +7,10 @@ dotenv.config();
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-2.0-flash";
 const BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent`;
+
+if (!API_KEY) {
+  console.warn("WARNING: GEMINI_API_KEY is not set in .env");
+}
 
 export async function askGeminiWithRest(fullPrompt) {
   if (!fullPrompt || !fullPrompt.toString().trim()) {
@@ -44,7 +49,7 @@ export async function askGeminiWithRest(fullPrompt) {
       const candidate = response.data?.candidates?.[0] || {};
       const parts = candidate?.content?.parts || [];
 
-      // Ghép text nếu có
+      // Merge all text parts (if any)
       let reply = parts
         .map((p) => p.text || "")
         .join("")
@@ -60,19 +65,18 @@ export async function askGeminiWithRest(fullPrompt) {
 
         if (finish === "MAX_TOKENS") {
           reply =
-            "Câu trả lời quá dài nên hệ thống AI đã phải cắt bớt. " +
-            "Bạn hãy thử hỏi ngắn hơn hoặc tập trung vào một vấn đề cụ thể (ví dụ: chỉ hỏi về một bé hoặc một mũi tiêm).";
+            "The answer was too long so the AI system had to cut it off. " +
+            "Please try asking a shorter question or focus on one specific topic (for example: only one child or one particular vaccine dose).";
         } else {
           reply =
-            "Hiện tại hệ thống AI không trả về nội dung phù hợp. " +
-            "Bạn hãy thử diễn đạt lại câu hỏi đơn giản hơn hoặc chia nhỏ câu hỏi nhé.";
+            "The AI system did not return a suitable response. " +
+            "Please try rephrasing your question in a simpler way or break it into smaller questions.";
         }
       }
 
-      // ✅ Tới đây DÙ có hay không có text gốc, mình luôn có reply → RETURN, KHÔNG throw
       return reply;
     } catch (err) {
-      // Chỉ retry nếu server quá tải 503
+      // Only retry if the server is overloaded (503)
       if (err.response?.status === 503 && attempt < 3) {
         lastError = err;
         console.error("Gemini overloaded:", err.response.data);
@@ -81,12 +85,12 @@ export async function askGeminiWithRest(fullPrompt) {
         continue;
       }
 
-      // Các lỗi khác thì trả cho controller xử lý
+      // Other errors are thrown back to the controller
       throw err;
     }
   }
 
-  // Sau 3 lần retry mà vẫn 503
+  // After 3 retries we still get 503
   throw lastError || new Error("Gemini UNAVAILABLE");
 }
 
