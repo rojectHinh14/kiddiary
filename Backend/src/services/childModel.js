@@ -2,18 +2,18 @@
 const { sequelize } = require("../models");
 
 /**
- * Lấy full dữ liệu tất cả bé của 1 user:
- * - Thông tin cơ bản
- * - Lịch sử cân nặng / chiều cao
- * - Nhật ký uống sữa
- * - Lịch sử ngủ
- * - Vaccine tổng quát (childvaccines)
- * - Vaccine theo từng mũi (childvaccinedoses + vaccinedoses)
+ * Get full children info for a user:
+ * - child profile
+ * - growth history
+ * - milk logs
+ * - sleep logs
+ * - vaccine doses + vaccine info
  */
 export async function getChildrenFullInfoByUserId(userId) {
   const [rows] = await sequelize.query(
     `
     SELECT
+      -- Child basic info
       cp.id AS childId,
       cp.userId,
       cp.firstName,
@@ -21,23 +21,39 @@ export async function getChildrenFullInfoByUserId(userId) {
       cp.dob,
       cp.genderCode,
       cp.avatarUrl,
-      cp.weight AS currentWeight,
-      cp.height AS currentHeight,
 
-      -- lịch sử phát triển
+      -- Current weight/height from latest childhistory
+      (
+        SELECT ch2.weight
+        FROM childhistories ch2
+        WHERE ch2.childId = cp.id
+        ORDER BY ch2.date DESC
+        LIMIT 1
+      ) AS currentWeight,
+
+      (
+        SELECT ch3.height
+        FROM childhistories ch3
+        WHERE ch3.childId = cp.id
+        ORDER BY ch3.date DESC
+        LIMIT 1
+      ) AS currentHeight,
+
+      -- Growth history
       ch.id AS historyId,
       ch.date AS historyDate,
       ch.weight AS historyWeight,
       ch.height AS historyHeight,
 
-      -- nhật ký sữa
+      -- Milk logs
       ml.id AS milkLogId,
       ml.feedingAt,
       ml.amountMl,
+      ml.sourceCode,
       ml.moodTags,
       ml.note AS milkNote,
 
-      -- lịch sử ngủ
+      -- Sleep logs
       sl.id AS sleepId,
       sl.sleepDate,
       sl.startTime,
@@ -46,51 +62,55 @@ export async function getChildrenFullInfoByUserId(userId) {
       sl.quality,
       sl.notes AS sleepNote,
 
-      -- bảng tổng hợp vaccine theo loại (nếu bạn vẫn dùng)
-      cv.id AS childVaccineId,
-      cv.status AS vaccineStatus,
-      cv.updateTime AS vaccineUpdateTime,
-      v.id  AS vaccineId,
+      -- Child-vaccine-dose link
+      cvd.id AS childVaccineDoseId,
+      cvd.status AS vaccineStatus,
+      cvd.injectedDate,
+      cvd.note AS vaccineNote,
+
+      -- Vaccine dose info
+      vd.id AS vaccineDoseId,
+      vd.doseNumber,
+      vd.recommendedAge,
+      vd.doseDescription,
+
+      -- Vaccine master info
+      v.id AS vaccineId,
       v.vaccinationType,
       v.diseaseName,
       v.vaccineName,
+      v.about,
+      v.description,
+      v.required,
       v.recommendedDate,
-
-      -- THÊM: vaccine theo từng mũi
-      cvd.id           AS childVaccineDoseId,
-      cvd.status       AS doseStatus,
-      cvd.injectedDate AS doseInjectedDate,
-      cvd.note         AS doseNote,
-      vd.id            AS vaccineDoseId,
-      vd.doseNumber,
-      vd.recommendedAge,
-      vd.doseDescription
+      v.symptoms
 
     FROM childprofiles cp
-      LEFT JOIN childhistories    ch  ON ch.childId  = cp.id
-      LEFT JOIN childmilklogs     ml  ON ml.childId  = cp.id
-      LEFT JOIN childsleeplogs    sl  ON sl.childId  = cp.id
-
-      -- tổng hợp vaccine theo loại
-      LEFT JOIN childvaccines     cv  ON cv.childId  = cp.id
-      LEFT JOIN vaccines          v   ON v.id        = cv.vaccineId
-
-      -- chi tiết từng mũi
-      LEFT JOIN childvaccinedoses cvd ON cvd.childId     = cp.id
-      LEFT JOIN vaccinedoses      vd  ON vd.id          = cvd.vaccineDoseId
-      -- dùng lại bảng vaccines nếu muốn
-      -- LEFT JOIN vaccines       v2  ON v2.id          = vd.vaccineId
-
+      LEFT JOIN childhistories     ch  ON ch.childId  = cp.id
+      LEFT JOIN childmilklogs      ml  ON ml.childId  = cp.id
+      LEFT JOIN childsleeplogs     sl  ON sl.childId  = cp.id
+      LEFT JOIN childvaccinedoses  cvd ON cvd.childId = cp.id
+      LEFT JOIN vaccinedoses       vd  ON vd.id       = cvd.vaccineDoseId
+      LEFT JOIN vaccines           v   ON v.id        = vd.vaccineId
     WHERE cp.userId = ?
-    ORDER BY cp.id
+    ORDER BY
+      cp.id,
+      ch.date DESC,
+      ml.feedingAt DESC,
+      sl.sleepDate DESC,
+      vd.doseNumber ASC
   `,
     { replacements: [userId] }
   );
 
+  //----------------------------------------------------
+  // Convert flat rows → nested children map
+  //----------------------------------------------------
   const childrenMap = {};
 
   for (const row of rows) {
     const childId = row.childId;
+
     if (!childrenMap[childId]) {
       childrenMap[childId] = {
         id: childId,
@@ -102,18 +122,16 @@ export async function getChildrenFullInfoByUserId(userId) {
         avatarUrl: row.avatarUrl,
         currentWeight: row.currentWeight,
         currentHeight: row.currentHeight,
-
         histories: [],
         milkLogs: [],
         sleepLogs: [],
-        vaccines: [],        // tổng hợp theo loại (cũ)
-        vaccineDoses: [],    // danh sách từng mũi (mới)
+        vaccines: [],
       };
     }
 
     const child = childrenMap[childId];
 
-    // lịch sử phát triển
+    // Growth history
     if (row.historyId) {
       child.histories.push({
         id: row.historyId,
@@ -123,18 +141,19 @@ export async function getChildrenFullInfoByUserId(userId) {
       });
     }
 
-    // nhật ký sữa
+    // Milk logs
     if (row.milkLogId) {
       child.milkLogs.push({
         id: row.milkLogId,
         feedingAt: row.feedingAt,
         amountMl: row.amountMl,
+        sourceCode: row.sourceCode,
         moodTags: row.moodTags,
         note: row.milkNote,
       });
     }
 
-    // nhật ký ngủ
+    // Sleep logs
     if (row.sleepId) {
       child.sleepLogs.push({
         id: row.sleepId,
@@ -147,38 +166,28 @@ export async function getChildrenFullInfoByUserId(userId) {
       });
     }
 
-    // tổng hợp vaccine theo loại (nếu vẫn dùng)
-    if (row.childVaccineId) {
-      child.vaccines.push({
-        childVaccineId: row.childVaccineId,
-        vaccineId: row.vaccineId,
-        status: row.vaccineStatus,
-        updateTime: row.vaccineUpdateTime,
-        vaccinationType: row.vaccinationType,
-        diseaseName: row.diseaseName,
-        vaccineName: row.vaccineName,
-        recommendedDate: row.recommendedDate,
-      });
-    }
-
-    // chi tiết từng mũi
+    // Vaccines (per dose)
     if (row.childVaccineDoseId) {
-      child.vaccineDoses.push({
+      child.vaccines.push({
         childVaccineDoseId: row.childVaccineDoseId,
-        vaccineDoseId: row.vaccineDoseId,
-        status: row.doseStatus,
-        injectedDate: row.doseInjectedDate,
-        note: row.doseNote,
+        vaccineStatus: row.vaccineStatus,
+        injectedDate: row.injectedDate,
+        vaccineNote: row.vaccineNote,
 
+        vaccineDoseId: row.vaccineDoseId,
         doseNumber: row.doseNumber,
         recommendedAge: row.recommendedAge,
         doseDescription: row.doseDescription,
 
-        // nếu bạn muốn gộp thêm tên vaccine:
         vaccineId: row.vaccineId,
         vaccinationType: row.vaccinationType,
         diseaseName: row.diseaseName,
         vaccineName: row.vaccineName,
+        about: row.about,
+        description: row.description,
+        required: row.required,
+        recommendedDate: row.recommendedDate,
+        symptoms: row.symptoms,
       });
     }
   }
@@ -186,6 +195,6 @@ export async function getChildrenFullInfoByUserId(userId) {
   return Object.values(childrenMap);
 }
 
-// default export
+// Optional default export
 const childService = { getChildrenFullInfoByUserId };
 export default childService;

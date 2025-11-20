@@ -1,83 +1,180 @@
-# Backend
+# KidDiary Backend — Node.js, Express, Sequelize, MySQL
 
-### **LOGIN**
+This is the backend API for the KidDiary project, built with **Node.js**, **Express**, **Sequelize ORM**, and **MySQL**.
 
-If the login is successful, the server will return the following response:
+---
+
+## 1. System Requirements
+
+Make sure your environment has the following installed:
+
+- **Node.js** ≥ 16
+- **npm** or **yarn**
+- **MySQL Server**
+- **Git**
+
+---
+
+## 2. Clone the Repository
+
+```bash
+git clone <your-repo-link>
+cd <project-folder>
+```
+
+---
+
+## 3. Install Dependencies
+
+```bash
+npm install
+# or
+yarn install
+```
+
+---
+
+## 4. Environment Configuration
+
+### 4.1 Create the `.env` file
+
+The project includes a sample environment file:
 
 ```
+.env.example
+```
+
+Copy it to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Then fill in your values:
+
+```
+PORT=
+URL_REACT=
+NODE_ENV=
+JWT_SECRET=
+JWT_EXPIRES=
+GEMINI_API_KEY=
+GROK_API_KEY=
+
+AI_TAGGING_URL=
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+FB_CLIENT_ID=
+FB_CLIENT_SECRET=
+
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+```
+
+---
+
+## 🗄️ 5. Configure Database (MySQL + Sequelize)
+
+### `src/config/config.json`
+
+Update MySQL credentials according to your local environment:
+
+```json
 {
-    "errCode": 0,
-    "errMessage": "Login successful",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJ0ZXN0QGdtYWlsLmNvbSIsImlhdCI6MTc1ODQ1NzAzOCwiZXhwIjoxNzU4NDc1MDM4fQ.EZ0Qapx0Ul_23ElCJvTbDgmXGoZd3a9KUGHhK136-yE",
-    "user": {
-        "id": 1,
-        "firstName": "Thang",
-        "lastName": "Vu",
-        "email": "test@gmail.com",
-        "createdAt": "2025-09-19T13:43:57.000Z",
-        "updatedAt": "2025-09-19T13:43:57.000Z"
-    }
-}
-```
-
-If the user enters an incomplete input, the following response will be returned:
-
-```
-{
-    "errCode": 1,
-    "errMessage": "Missing input"
-}
-```
-
-If the user enters the wrong password, the server will return the following response:
-
-```
-{
-    "errCode": 2,
-    "errMessage": "Wrong password"
-}
-```
-
-### **REGISTER**
-
-while if the registration is successful, the server will return the following response:
-
-```
-{
-  "errCode": 0,
-  "errMessage": "Login successful",
-  "user": {
-    "id": 1,
-    "firstName": "Thang",
-    "lastName": "Vu",
-    "email": "test@gmail.com",
-    "password": "$2b$10$2q5dzPbXWOWAztrr/z2Tj.UF0oUf8rlFP.38QF14btYfLpTA62rpi",
-    "createdAt": "2025-09-19T13:43:57.000Z",
-    "updatedAt": "2025-09-19T13:43:57.000Z"
+  "development": {
+    "username": "root",
+    "password": "",
+    "database": "kiddiary",
+    "port": 3306,
+    "dialect": "mysql",
+    "logging": false,
+    "timezone": "+07:00"
   }
 }
 ```
 
-If the user enters an EMAIL THAT ALREADY EXISTS, the server will return the following response:
+⚠️ **Do not commit real database passwords in production.**
 
-```
-{
-    "errCode": 1,
-    "errMessage": "Email already registered"
-}
-```
+---
 
-If the user enters missing registration information, the server will return the following response:
+## 6. Create MySQL Database
 
-```
-{
-    "errCode": 1,
-    "errMessage": "Missing input"
-}
+Run this SQL command:
+
+```sql
+CREATE DATABASE kiddiary;
 ```
 
-- **If you want to run the server, create a new .env file and copy the entire .env.example file and paste it.**
-- **Then declare NODE_ENV=development, the other 2 variables are random**
-- **In the src/config/config.json file, edit the port and database, username, and password of mysql according to the local setup.**
-- **Once you have set up mysql, run the command "npx sequelize-cli db:migrate" to have sequelize automatically create tables for the database.**
-- **JWT_SECRET generate any 64 character code**
+---
+
+## 7. Database Connection Check
+
+The project uses `connectDB.js`:
+
+```js
+const sequelize = new Sequelize("kiddiary", "root", null, {
+  host: "localhost",
+  dialect: "mysql",
+});
+```
+
+If your MySQL username or password is different, the user needs to update this file.
+
+---
+
+## ▶️ 8. Run the Project
+
+### Development mode:
+
+```bash
+npm run dev
+```
+
+### Production mode:
+
+```bash
+npm start
+```
+
+Your server will run on:
+
+```
+http://localhost:<PORT>
+```
+
+---
+
+## 9. Project Structure (Simplified)
+
+```
+src/
+ ├── config/
+ │     ├── config.json
+ │     └── connectDB.js
+ ├── controllers/
+ ├── models/
+ ├── routes/
+ └── server.js
+```
+
+---
+
+## 10. Testing the API
+
+You can use **Postman** or **Thunder Client**.
+If you have a Postman Collection, import it here.
+
+---
+
+## Contributions
+
+Contributions are welcome!
+Feel free to open an **Issue** or **Pull Request**.
+
+---
+
+## License
+
+MIT License.

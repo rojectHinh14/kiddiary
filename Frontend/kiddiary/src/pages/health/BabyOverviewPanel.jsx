@@ -60,9 +60,7 @@ const Field = ({ label, value }) => (
         boxShadow: "0 2px 0 rgba(0,0,0,0.06)",
       }}
     >
-      <span style={{ color: "#16837B", fontWeight: 700 }}>
-        {value ?? "--"}
-      </span>
+      <span style={{ color: "#16837B", fontWeight: 700 }}>{value ?? "--"}</span>
     </div>
   </div>
 );
@@ -154,8 +152,8 @@ const getHeightInCm = (height) => {
 
   // Nếu > 3 thì coi là cm (50, 60, 100...)
   // Nếu <= 3 thì coi là mét (0.65, 1.2...)
-  if (h > 3) return h;     // cm
-  return h * 100;          // m -> cm
+  if (h > 3) return h; // cm
+  return h * 100; // m -> cm
 };
 
 const calculateBMI = (weight, height) => {
@@ -171,9 +169,8 @@ const calculateBMI = (weight, height) => {
   const bmi = w / (hM * hM);
 
   if (!Number.isFinite(bmi)) return null;
-  return Number(bmi.toFixed(1));      
+  return Number(bmi.toFixed(1));
 };
-
 
 const getAvatarSrc = (avatarUrl) => {
   if (!avatarUrl) return undefined;
@@ -377,12 +374,10 @@ export default function BabyOverviewPanel({ onOpenVaccination, onOpenSleep }) {
       </div>
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <Tile
-          title="Weight, Height"
+          title="Growth"
           icon={<ScaleRoundedIcon />}
           bg="#BFEDE1"
-          onClick={() =>
-            navigate(`/home/health/growth/${selectedChild?.id}`)
-          }
+          onClick={() => navigate(`/home/health/growth/${selectedChild?.id}`)}
         />
         <Tile
           title="Sleep Tracker"

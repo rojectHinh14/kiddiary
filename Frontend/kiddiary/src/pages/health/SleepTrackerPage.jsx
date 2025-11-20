@@ -25,11 +25,8 @@ import {
 } from "recharts";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  createSleepLog,
-  loadSleepWeek,
-} from "../../store/slice/sleepSlice";
-import { getChildrenByUser } from "../../services/childService"; 
+import { createSleepLog, loadSleepWeek } from "../../store/slice/sleepSlice";
+import { getChildrenByUser } from "../../services/childService";
 
 // ===== Helpers =====
 function toMinutes(hhmm) {
@@ -168,11 +165,7 @@ function AddSleepSection({ babyName, onCancel, onSave }) {
               color: "rgba(0,0,0,.7)",
               textAlign: "right",
             }}
-          >
-            Tự động phân loại
-            <br />
-            theo thời gian →
-          </Typography>
+          ></Typography>
           <Chip
             icon={
               type === "night" ? <BedtimeRoundedIcon /> : <WbSunnyRoundedIcon />
@@ -340,10 +333,8 @@ export default function SleepTrackerPage({ onBack }) {
     const fetchChildName = async () => {
       if (!childId) return;
       try {
-        const children = await getChildrenByUser(); 
-        const found = children.find(
-          (c) => String(c.id) === String(childId)
-        );
+        const children = await getChildrenByUser();
+        const found = children.find((c) => String(c.id) === String(childId));
         if (found) {
           setBabyName(`${found.firstName} ${found.lastName}`.trim());
         } else {
@@ -364,8 +355,6 @@ export default function SleepTrackerPage({ onBack }) {
     const today = new Date().toISOString().slice(0, 10);
     dispatch(loadSleepWeek({ childId, date: today }));
   }, [childId, dispatch]);
-
-
 
   // tổng today (night/day)
   const { nightMin, dayMin, totalMin } = useMemo(() => {
@@ -404,8 +393,7 @@ export default function SleepTrackerPage({ onBack }) {
 
       const { type, duration } = getTypeAndDurationFromLog(log);
 
-      const obj =
-        map.get(idx) || { day: label, nightMin: 0, dayMin: 0 };
+      const obj = map.get(idx) || { day: label, nightMin: 0, dayMin: 0 };
       if (type === "night") obj.nightMin += duration;
       else obj.dayMin += duration;
       map.set(idx, obj);
@@ -559,9 +547,7 @@ export default function SleepTrackerPage({ onBack }) {
           Đang tải dữ liệu...
         </Typography>
       )}
-      {error && (
-        <Typography sx={{ mb: 2, color: "red" }}>{error}</Typography>
-      )}
+      {error && <Typography sx={{ mb: 2, color: "red" }}>{error}</Typography>}
 
       {/* Today */}
       <Card
@@ -602,9 +588,7 @@ export default function SleepTrackerPage({ onBack }) {
           </Typography>
 
           <Typography
-            onClick={() =>
-              navigate(`/home/health/sleep/${childId}/history`)
-            }
+            onClick={() => navigate(`/home/health/sleep/${childId}/history`)}
             sx={{
               mt: 1,
               fontSize: 14,
@@ -640,7 +624,12 @@ export default function SleepTrackerPage({ onBack }) {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="night" stackId="a" fill="#2CC1AE" name="Night Sleep" />
+              <Bar
+                dataKey="night"
+                stackId="a"
+                fill="#2CC1AE"
+                name="Night Sleep"
+              />
               <Bar
                 dataKey="dayNap"
                 stackId="a"

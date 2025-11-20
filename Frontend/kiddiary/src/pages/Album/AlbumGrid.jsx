@@ -1,7 +1,13 @@
+// AlbumGrid.jsx
 import { useNavigate } from "react-router-dom";
 import AlbumCard from "./AlbumCard";
 
-export default function AlbumGrid({ albums, onAddClick, onAddToAlbum }) {
+export default function AlbumGrid({
+  albums,
+  onAddClick,
+  onAddToAlbum,
+  onDelete, // ← THÊM PROP MỚI
+}) {
   const navigate = useNavigate();
 
   return (
@@ -10,8 +16,9 @@ export default function AlbumGrid({ albums, onAddClick, onAddToAlbum }) {
         <AlbumCard
           key={a.id}
           album={a}
-          onOpen={() => navigate(`/home/album/${a.id}`)} 
+          onOpen={() => navigate(`/home/album/${a.id}`)}
           onAddToAlbum={() => onAddToAlbum?.(a.id)}
+          onDelete={() => onDelete?.(a.id, a.title)} // ← TRUYỀN XUỐNG
         />
       ))}
 

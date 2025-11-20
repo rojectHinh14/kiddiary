@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clearViewing, updateOneChild } from "../../store/slice/childrenSlice";
 import { fileToBase64 } from "../../services/childService";
-
+import { loadChildren } from "../../store/slice/childrenSlice";
 const toInputDate = (d) => (!d ? "" : new Date(d).toISOString().slice(0, 10));
 
 const getLatestMeasurement = (child) => {
@@ -125,6 +125,7 @@ export default function ChildViewDialog() {
       setSaving(true);
       setErr(null);
       await dispatch(updateOneChild({ id: child.id, payload })).unwrap();
+      dispatch(loadChildren());
       dispatch(clearViewing());
       setEdit(false);
     } catch (e) {

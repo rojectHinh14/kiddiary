@@ -93,10 +93,26 @@ const removeMediaFromAlbum = async (req, res) => {
       .json({ message: "Server error", error: err.message });
   }
 };
+let deleteAlbum = async (req, res) => {
+  try {
+    const userId = req.user.id; // từ verifyToken
+    const { albumId } = req.params;
+
+    const result = await albumService.deleteAlbum(userId, albumId);
+
+    return res.status(200).json({
+      message: "Album deleted successfully",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
 export default {
   createAlbum,
   getAllAlbumsByUser,
   addMediaToAlbum,
   getAlbumById,
   removeMediaFromAlbum,
+  deleteAlbum,
 };

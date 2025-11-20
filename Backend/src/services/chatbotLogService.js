@@ -9,7 +9,7 @@ const saveChatLog = async (userId, question, answer) => {
       question,
       answer,
     });
-    
+
     return chatLog;
   } catch (error) {
     console.error("Error saving chat log:", error);
@@ -45,7 +45,7 @@ const clearChatHistory = async (userId) => {
     const result = await db.ChatbotLog.destroy({
       where: { userId },
     });
-    
+
     return { message: "Chat history cleared", deletedCount: result };
   } catch (error) {
     console.error("Error clearing chat history:", error);

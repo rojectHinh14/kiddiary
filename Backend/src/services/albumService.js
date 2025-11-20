@@ -107,11 +107,48 @@ const removeMediaFromAlbum = async (albumId, mediaId, userId) => {
     return { errCode: 4, message: "Error removing media from album" };
   }
 };
+const deleteAlbum = async (userId, albumId) => {
+  const album = await db.Album.findOne({
+    where: { id: albumId, userId },
+    include: [
+      {
+        model: db.Media,
+        through: { attributes: [] }, // bỏ AlbumMedia
+      },
+    ],
+  });
 
+  if (!album) throw new Error("Album not found or no permission");
+
+  const mediaList = album.Media;
+
+  // Lấy id media để xoá
+  const mediaIds = mediaList.map((m) => m.id);
+
+  // 1. Xóa record trong AlbumMedia
+  await db.AlbumMedia.destroy({
+    where: { albumId },
+  });
+
+  // 2. Xóa media liên kết
+  if (mediaIds.length > 0) {
+    await db.Media.destroy({
+      where: { id: mediaIds },
+    });
+  }
+
+  // 3. Xóa album
+  await db.Album.destroy({
+    where: { id: albumId, userId },
+  });
+
+  return { deletedMedia: mediaIds, deletedAlbumId: albumId };
+};
 export default {
   createAlbum,
   getAllAlbumsByUser,
   addMediaToAlbum,
   getAlbumById,
   removeMediaFromAlbum,
+  deleteAlbum,
 };

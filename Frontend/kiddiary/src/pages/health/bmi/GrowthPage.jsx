@@ -496,7 +496,7 @@ export default function GrowthPage() {
       >
         <DialogTitle>Delete Measurement</DialogTitle>
         <DialogContent dividers>
-          Bạn có chắc chắn muốn xóa bản ghi ngày{" "}
+          Do you want to delete the record on:{" "}
           <b>{selected ? new Date(selected.date).toLocaleDateString() : ""}</b>?
         </DialogContent>
         <DialogActions>

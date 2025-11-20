@@ -28,7 +28,9 @@ export default function ProfileMenu({ onOpenProfile, onLogout }) {
     });
 
   const absUrl = (img) =>
-    img?.startsWith?.("http") ? img : `${import.meta.env.VITE_BACKEND_URL}${img}`;
+    img?.startsWith?.("http")
+      ? img
+      : `${import.meta.env.VITE_BACKEND_URL}${img}`;
 
   useEffect(() => {
     (async () => {
@@ -38,7 +40,8 @@ export default function ProfileMenu({ onOpenProfile, onLogout }) {
         if (res?.data?.errCode === 0) {
           const u = res.data.data || {};
           setUserData({
-            name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Username",
+            name:
+              `${u.firstName || ""} ${u.lastName || ""}`.trim() || "Username",
             email: u.email || "user@email.com",
             image: u.image || "https://i.pravatar.cc/100?img=12",
           });
@@ -61,12 +64,11 @@ export default function ProfileMenu({ onOpenProfile, onLogout }) {
     })();
   }, []);
 
-  const display =
-    userData || {
-      name: "Username",
-      email: "user@email.com",
-      image: "https://i.pravatar.cc/100?img=12",
-    };
+  const display = userData || {
+    name: "Username",
+    email: "user@email.com",
+    image: "https://i.pravatar.cc/100?img=12",
+  };
 
   return (
     <div>
@@ -145,33 +147,32 @@ export default function ProfileMenu({ onOpenProfile, onLogout }) {
 
         {/* Items */}
         <div className="p-3">
- <MenuItem
-          onClick={() => {
-            handleClose();
-            gotoProfile();
-          }}
-          className="hover:!bg-teal-50"
-        >
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-teal-100 text-teal-700">
-            <User size={16} />
-          </span>
-          <span className="ml-2">Hồ sơ cá nhân</span>
-        </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              gotoProfile();
+            }}
+            className="hover:!bg-teal-50"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-teal-100 text-teal-700">
+              <User size={16} />
+            </span>
+            <span className="ml-2">My profile</span>
+          </MenuItem>
 
-        <MenuItem
-          onClick={() => {
-            handleClose();
-            doLogout();
-          }}
-          className="hover:!bg-red-50 !text-red-600"
-        >
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-red-100">
-            <LogOut size={16} />
-          </span>
-          <span className="ml-2">Đăng xuất</span>
-        </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              doLogout();
+            }}
+            className="hover:!bg-red-50 !text-red-600"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-red-100">
+              <LogOut size={16} />
+            </span>
+            <span className="ml-2">Log out</span>
+          </MenuItem>
         </div>
-       
       </Menu>
     </div>
   );

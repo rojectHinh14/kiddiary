@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/pages/Health/VaccinationSchedulePage.jsx
+import React, { useEffect, useState, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -67,15 +68,27 @@ function UpdateDialog({ open, onClose, data, onSave, saving }) {
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
 
-  useEffect(() => {
-    if (data) {
-      setStatus(data.status || "not_injected");
-      setDate(data.injectedDate ? data.injectedDate.slice(0, 10) : "");
-      setNote(data.note || "");
-    }
-  }, [data]);
+  // Nhớ lại recordId để chỉ reset state khi chọn MŨI TIÊM KHÁC
+  const prevRecordIdRef = useRef(null);
 
-  if (!open) return null;
+  useEffect(() => {
+    // Chỉ init lại khi:
+    // - Dialog open
+    // - Có data
+    // - recordId thay đổi (chọn mũi khác)
+    if (open && data) {
+      if (prevRecordIdRef.current !== data.recordId) {
+        prevRecordIdRef.current = data.recordId;
+        setStatus(data.status || "not_injected");
+        setDate(data.injectedDate ? data.injectedDate.slice(0, 10) : "");
+        setNote(data.note || "");
+      }
+    }
+  }, [open, data]);
+
+  const handleChangeNote = (e) => {
+    setNote(e.target.value);
+  };
 
   const Row = ({ label, children }) => (
     <Box
@@ -129,15 +142,15 @@ function UpdateDialog({ open, onClose, data, onSave, saving }) {
             </Typography>
           </div>
         </Row>
-        <Row label="About">{data.about}</Row>
-        <Row label="Vaccine Name">Dose {data?.vaccineName}</Row>
-        <Row label="Recommended Age">{data?.recommendedAge}</Row>
+        <Row label="About">{data?.about || "-"}</Row>
+        <Row label="Vaccine Name">{data?.vaccineName || "-"}</Row>
+        <Row label="Recommended Age">{data?.recommendedAge || "-"}</Row>
         <Row label="Description">
           <Typography sx={{ whiteSpace: "pre-wrap", fontSize: "0.95rem" }}>
             {data?.doseDescription || "-"}
           </Typography>
         </Row>
-        <Row label="Side Effects">{data.symptoms}</Row>
+        <Row label="Side Effects">{data?.symptoms || "-"}</Row>
         <Row label="Status">
           <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
             <FormControl size="small" sx={{ minWidth: 180 }}>
@@ -164,16 +177,6 @@ function UpdateDialog({ open, onClose, data, onSave, saving }) {
               onChange={(e) => setDate(e.target.value)}
             />
           </Box>
-        </Row>
-        <Row label="Note">
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            placeholder="Add note (clinic, reaction, etc.)"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
         </Row>
       </DialogContent>
 
@@ -218,7 +221,7 @@ export default function VaccinationSchedulePage() {
     severity: "success",
   });
 
-  // Load children list
+  // Load children list nếu chưa có
   useEffect(() => {
     if (!children.length) dispatch(loadChildren());
   }, [dispatch, children.length]);
@@ -229,10 +232,17 @@ export default function VaccinationSchedulePage() {
     try {
       const res = await axios.get(`/api/children/${childId}/vaccines`);
       if (res.data.errCode === 0) {
-        const sorted = sortByRecommendedAge(res.data.data);
+        const sorted = sortByRecommendedAge(res.data.data || []);
         setVaccines(sorted);
+      } else {
+        setSnackbar({
+          open: true,
+          message: res.data.errMessage || "Failed to load vaccines",
+          severity: "error",
+        });
       }
     } catch (err) {
+      console.error("Load vaccines error:", err);
       setSnackbar({
         open: true,
         message: "Failed to load vaccines",
@@ -245,33 +255,41 @@ export default function VaccinationSchedulePage() {
 
   useEffect(() => {
     if (childId) loadVaccines();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId]);
 
   const child = children.find((c) => String(c.id) === String(childId));
 
   const openUpdate = (item) => {
+    if (!item) return;
     const { dose, status, injectedDate, note } = item;
     const vaccine = dose.vaccine;
 
     setSelected({
-      recordId: item.id, // id của bảng child_vaccines (cần để update)
-      vaccineDoseId: dose.id, // vaccineDoseId trong bảng dose
-      childName: `${child?.firstName} ${child?.lastName}`.trim(),
-      vaccineName: vaccine.vaccineName,
-      vaccinationType: vaccine.vaccinationType,
-      diseaseName: vaccine.diseaseName,
-      about: vaccine.about,
-      symptoms: vaccine.symptoms,
+      recordId: item.id, // id bản ghi childvaccinedoses
+      vaccineDoseId: dose.id,
+      childName: `${child?.firstName || ""} ${child?.lastName || ""}`.trim(),
+      vaccineName: vaccine?.vaccineName,
+      vaccinationType: vaccine?.vaccinationType,
+      diseaseName: vaccine?.diseaseName,
+      about: vaccine?.about,
+      symptoms: vaccine?.symptoms,
       status,
       injectedDate,
       note: note || "",
-      doseNumber: dose.doseNumber,
-      recommendedAge: dose.recommendedAge,
-      doseDescription: dose.doseDescription,
+      doseNumber: dose?.doseNumber,
+      recommendedAge: dose?.recommendedAge,
+      doseDescription: dose?.doseDescription,
     });
   };
 
-  // GỌI API LƯU THẬT
+  const handleCloseDialog = () => {
+    if (!saving) {
+      setSelected(null);
+    }
+  };
+
+  // GỌI API LƯU
   const handleSave = async ({ status, date, note }) => {
     if (!selected) return;
 
@@ -303,8 +321,15 @@ export default function VaccinationSchedulePage() {
           severity: "success",
         });
         setSelected(null);
+      } else {
+        setSnackbar({
+          open: true,
+          message: res.data.errMessage || "Failed to update. Please try again.",
+          severity: "error",
+        });
       }
     } catch (err) {
+      console.error("Update vaccine dose error:", err);
       const msg =
         err.response?.data?.errMessage || "Failed to update. Please try again.";
       setSnackbar({ open: true, message: msg, severity: "error" });
@@ -390,19 +415,19 @@ export default function VaccinationSchedulePage() {
                 >
                   <div className="col-span-4 p-4 border-r">
                     <div className="font-semibold">
-                      {vaccine.vaccinationType}
+                      {vaccine?.vaccinationType}
                     </div>
                     <div className="text-xs text-gray-600">
-                      {vaccine.diseaseName}
+                      {vaccine?.diseaseName}
                     </div>
                   </div>
                   <div className="col-span-2 p-4 border-r text-center font-medium">
-                    Dose {dose.doseNumber}
+                    Dose {dose?.doseNumber}
                   </div>
                   <div className="col-span-4 p-4 border-r">
-                    <div className="font-medium">{dose.recommendedAge}</div>
+                    <div className="font-medium">{dose?.recommendedAge}</div>
                     <div className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">
-                      {dose.doseDescription}
+                      {dose?.doseDescription}
                     </div>
                   </div>
                   <div className="col-span-2 p-4 flex justify-center">
@@ -436,8 +461,9 @@ export default function VaccinationSchedulePage() {
 
       {/* Dialog & Snackbar */}
       <UpdateDialog
+        key={selected?.recordId || "empty"} // đảm bảo remount khi chọn mũi khác
         open={!!selected}
-        onClose={() => !saving && setSelected(null)}
+        onClose={handleCloseDialog}
         data={selected}
         onSave={handleSave}
         saving={saving}
