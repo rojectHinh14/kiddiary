@@ -93,7 +93,6 @@ export default function HomePage() {
             </div>
           ))}
         </section>
-
       </div>
       <FeatureSection
         features={[
@@ -105,9 +104,21 @@ export default function HomePage() {
             buttonHref: "#",
             imagePosition: "left",
             images: [
-              { src: "/image1.jpg", alt: "Photo 1", borderColor: "green" },
-              { src: "/image2.jpg", alt: "Photo 2", borderColor: "orange" },
-              { src: "/image3.jpg", alt: "Photo 3", borderColor: "pink" },
+              {
+                src: "https://cdn-media.sforum.vn/storage/app/media/ctv_seo3/anh-em-be-cuoi-23.jpg",
+                alt: "Photo 1",
+                borderColor: "green",
+              },
+              {
+                src: "https://cdn-media.sforum.vn/storage/app/media/ctv_seo3/anh-em-be-cuoi-22.jpg",
+                alt: "Photo 2",
+                borderColor: "orange",
+              },
+              {
+                src: "https://apolloskarate.com/upload/blogs/science-says-healthy-active-kids-get-better-grades.jpg",
+                alt: "Photo 3",
+                borderColor: "pink",
+              },
             ],
           },
         ]}

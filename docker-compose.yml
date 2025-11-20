@@ -1,0 +1,49 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "Thangvuvan0611@"
+      MYSQL_DATABASE: "kiddiary"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+  backend:
+    build: ./Backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      NODE_ENV: "production"
+      DB_HOST: "db"
+      DB_PORT: "3306"
+      DB_USER: "root"
+      DB_PASSWORD: "Thangvuvan0611@"
+      DB_NAME: "kiddiary"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+  frontend:
+    build: ./Frontend/kiddiary
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      VITE_BACKEND_URL: "http://backend:8080"
+    ports:
+      - "5173:5173"
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: "db"
+      PMA_PORT: "3306"
+      PMA_USER: "root"
+      PMA_PASSWORD: "Thangvuvan0611@"
+    ports:
+      - "8081:80" # mở phpMyAdmin ở http://localhost:8081
+volumes:
+  mysql_data:

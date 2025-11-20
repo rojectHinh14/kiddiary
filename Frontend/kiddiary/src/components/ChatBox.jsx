@@ -13,7 +13,7 @@ export default function ChatBox({
   const [messages, setMessages] = useState([
     {
       role: "bot",
-      text: "Xin chào, mình có thể giúp gì cho bạn?",
+      text: "Hello, how can I help you?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -55,7 +55,8 @@ export default function ChatBox({
         }
       );
 
-      let botReply = res.data.reply ?? "Xin lỗi, mình không nhận được phản hồi.";
+      let botReply =
+        res.data.reply ?? "Xin lỗi, mình không nhận được phản hồi.";
       const childrenCount = res.data.childrenCount ?? null;
 
       // Đảm bảo botReply LUÔN là string
@@ -102,7 +103,15 @@ export default function ChatBox({
 
   // Auto scroll xuống cuối khi có message mới
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }, 150);
+
+    return () => clearTimeout(timer);
   }, [messages]);
 
   // Helper đảm bảo ReactMarkdown luôn nhận string

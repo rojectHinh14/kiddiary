@@ -82,9 +82,16 @@ let initWebRoutes = (app) => {
   router.get("/api/media", verifyToken, mediaController.getAllMediaByUser);
   router.delete("/api/media/:id", verifyToken, mediaController.deleteMedia);
   router.get("/api/media/search", verifyToken, mediaController.searchByAiTags);
+  router.put("/api/media/:id", verifyToken, mediaController.updateMedia);
+
   //album
   router.post("/api/albums", verifyToken, albumController.createAlbum);
   router.get("/api/albums", verifyToken, albumController.getAllAlbumsByUser);
+  router.delete(
+    "/api/albums/:albumId",
+    verifyToken,
+    albumController.deleteAlbum
+  );
 
   //search
   router.get("/api/search", verifyToken, searchController.searchMedia);
@@ -187,10 +194,22 @@ let initWebRoutes = (app) => {
     childController.getSleepHistory
   );
 
-  router.put("/api/children/sleep/:id", verifyToken, childController.updateSleep);
-  router.delete("/api/children/sleep/:id", verifyToken, childController.deleteSleep);
-  router.get( "/api/children/:childId/sleep/week",verifyToken,childController.getSleepWeek);
-  router.post("/api/chat",verifyToken,chatController.chatWithChildrenInfo);
+  router.put(
+    "/api/children/sleep/:id",
+    verifyToken,
+    childController.updateSleep
+  );
+  router.delete(
+    "/api/children/sleep/:id",
+    verifyToken,
+    childController.deleteSleep
+  );
+  router.get(
+    "/api/children/:childId/sleep/week",
+    verifyToken,
+    childController.getSleepWeek
+  );
+  router.post("/api/chat", verifyToken, chatController.chatWithChildrenInfo);
   router.get(
     "/children/:childId/sleep/week",
     verifyToken,
@@ -213,14 +232,13 @@ let initWebRoutes = (app) => {
     "/child/:childId/vaccine/:vaccineId",
     childController.getVaccineWithDoses
   );
-   router.get(
-  "/api/children/:childId/milk-logs-range",
-  verifyToken,
-  childController.getChildMilkLogsByDateRange)
+  router.get(
+    "/api/children/:childId/milk-logs-range",
+    verifyToken,
+    childController.getChildMilkLogsByDateRange
+  );
 
   return app.use("/", router);
 };
-router.put("/api/media/:id", verifyToken, mediaController.updateMedia);
-
 
 module.exports = initWebRoutes;

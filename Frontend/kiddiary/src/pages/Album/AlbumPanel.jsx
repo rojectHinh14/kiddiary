@@ -3,8 +3,12 @@ import { useState, useEffect } from "react";
 import NewAlbumDialog from "./NewAlbumDialog";
 import AlbumGrid from "./AlbumGrid";
 import AlbumCreateWizard from "./AlbumCreateWizard";
-import { getAllAlbumsByUserService } from "../../services/albumService";
+import {
+  getAllAlbumsByUserService,
+  deleteAlbumService,
+} from "../../services/albumService";
 import ChatBox from "../../components/ChatBox";
+import ConfirmDeleteAlbumDialog from "../../components/ConfirmDeleteAlbumDialog";
 
 export default function AlbumPanel() {
   const [openNewDialog, setOpenNewDialog] = useState(false); // ← Đổi tên cho rõ (chỉ cho NewAlbumDialog)
@@ -18,6 +22,30 @@ export default function AlbumPanel() {
     albumId: null,
     initialInfo: null, // Chỉ dùng khi create new
   });
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    albumId: null,
+    albumTitle: "",
+  });
+  const handleOpenDelete = (albumId, albumTitle) => {
+    setDeleteDialog({ open: true, albumId, albumTitle });
+  };
+
+  const handleCloseDelete = () => {
+    setDeleteDialog({ open: false, albumId: null, albumTitle: "" });
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteAlbumService(deleteDialog.albumId);
+      alert("Album deleted successfully");
+      fetchAlbums(); // Refresh danh sách
+    } catch (err) {
+      alert("Failed to delete album");
+    } finally {
+      handleCloseDelete();
+    }
+  };
 
   useEffect(() => {
     fetchAlbums();
@@ -84,6 +112,7 @@ export default function AlbumPanel() {
           // ← FIX: Bundle state ngay lập tức, đảm bảo nhất quán
           setWizardConfig({ open: true, albumId, initialInfo: null });
         }}
+        onDelete={handleOpenDelete}
       />
 
       {/* Step 1: Dialog nhập title cho album mới */}
@@ -97,6 +126,12 @@ export default function AlbumPanel() {
           setWizardConfig({ open: true, albumId: null, initialInfo: info });
         }}
       />
+      <ConfirmDeleteAlbumDialog
+        open={deleteDialog.open}
+        albumTitle={deleteDialog.albumTitle}
+        onClose={handleCloseDelete}
+        onConfirm={handleConfirmDelete}
+      />
 
       {/* Wizard: Chọn media và xử lý create/add */}
       {wizardConfig.open && ( // ← Đổi: Dùng wizardConfig.open
@@ -107,7 +142,7 @@ export default function AlbumPanel() {
           albumId={wizardConfig.albumId} // ← Đổi: Từ config, luôn đúng
         />
       )}
-      <ChatBox/>
+      <ChatBox />
     </div>
   );
 }

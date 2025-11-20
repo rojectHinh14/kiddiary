@@ -9,7 +9,7 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[url('/login/kidloggin.jpg')] bg-cover bg-center bg-fixed flex flex-col">
+    <div className="min-h-screen bg-[url('/login/login_page.jpg')] bg-cover bg-center bg-fixed flex flex-col">
       <Navbar
         onLogin={() => setActiveForm("login")}
         onRegister={() => setActiveForm("register")}

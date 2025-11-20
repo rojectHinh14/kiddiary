@@ -32,7 +32,7 @@ const analyzeIntent = (prompt) => {
   ) {
     // Nếu chưa xác định loại media/album, nhưng có yếu tố thời gian, coi là tìm kiếm media theo ngày
     if (searchType === "general") {
-        searchType = "date"; 
+      searchType = "date";
     }
   }
 
@@ -43,7 +43,9 @@ const analyzeIntent = (prompt) => {
   const wordsToRemoveFromKeywords = []; // Mảng mới để lưu các từ/số đã dùng làm filter
 
   // Extract full date: 15/10/2024 or 10/15/2024
-  const dateMatch = lowerPrompt.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  const dateMatch = lowerPrompt.match(
+    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/
+  );
   if (dateMatch) {
     const [_, d, m, y] = dateMatch;
     const fullYear = y.length === 2 ? `20${y}` : y;
@@ -60,23 +62,35 @@ const analyzeIntent = (prompt) => {
     } else {
       // English month names
       const monthNames = {
-        'january': '01', 'jan': '01',
-        'february': '02', 'feb': '02',
-        'march': '03', 'mar': '03',
-        'april': '04', 'apr': '04',
-        'may': '05',
-        'june': '06', 'jun': '06',
-        'july': '07', 'jul': '07',
-        'august': '08', 'aug': '08',
-        'september': '09', 'sep': '09', 'sept': '09',
-        'october': '10', 'oct': '10',
-        'november': '11', 'nov': '11',
-        'december': '12', 'dec': '12'
+        january: "01",
+        jan: "01",
+        february: "02",
+        feb: "02",
+        march: "03",
+        mar: "03",
+        april: "04",
+        apr: "04",
+        may: "05",
+        june: "06",
+        jun: "06",
+        july: "07",
+        jul: "07",
+        august: "08",
+        aug: "08",
+        september: "09",
+        sep: "09",
+        sept: "09",
+        october: "10",
+        oct: "10",
+        november: "11",
+        nov: "11",
+        december: "12",
+        dec: "12",
       };
-      
+
       for (const [name, num] of Object.entries(monthNames)) {
         // Chỉ kiểm tra các tên tháng hoàn chỉnh
-        if (lowerPrompt.includes(name)) { 
+        if (lowerPrompt.includes(name)) {
           monthFilter = num;
           wordsToRemoveFromKeywords.push(name);
           // Thêm cả dạng viết tắt nếu dạng đầy đủ được tìm thấy
@@ -95,41 +109,84 @@ const analyzeIntent = (prompt) => {
     if (yearMatch) {
       const yearStr = yearMatch[1] || yearMatch[2];
       if (yearStr && yearStr.length === 4) {
-          yearFilter = yearStr;
-          wordsToRemoveFromKeywords.push("năm", "year", yearStr);
+        yearFilter = yearStr;
+        wordsToRemoveFromKeywords.push("năm", "year", yearStr);
       }
     }
   }
 
-
   // --- 2. EXTRACT KEYWORDS ---
-  
+
   // Stop words (Vietnamese + English)
   const stopWords = [
     // Vietnamese
-    "tìm", "kiếm", "cho", "tôi", "xem", "có", "những", "các", "ảnh", "hình",
-    "album", "bộ", "của", "trong", "về", "là", "mà", "và", "hay", "hoặc",
-    "vào", "ngày", "tháng", "năm",
+    "tìm",
+    "kiếm",
+    "cho",
+    "tôi",
+    "xem",
+    "có",
+    "những",
+    "các",
+    "ảnh",
+    "hình",
+    "album",
+    "bộ",
+    "của",
+    "trong",
+    "về",
+    "là",
+    "mà",
+    "và",
+    "hay",
+    "hoặc",
+    "vào",
+    "ngày",
+    "tháng",
+    "năm",
     // English
-    "find", "search", "show", "me", "get", "the", "a", "an", "in", "on", "at",
-    "of", "with", "from", "to", "for", "by", "photo", "photos", "image", "images",
-    "picture", "pictures", "day", "month", "year"
+    "find",
+    "search",
+    "show",
+    "me",
+    "get",
+    "the",
+    "a",
+    "an",
+    "in",
+    "on",
+    "at",
+    "of",
+    "with",
+    "from",
+    "to",
+    "for",
+    "by",
+    "photo",
+    "photos",
+    "image",
+    "images",
+    "picture",
+    "pictures",
+    "day",
+    "month",
+    "year",
   ];
-  
+
   // Extract keywords
-  let keywords = lowerPrompt
-    .split(/\s+/)
-    .filter((word) => {
-      // Loại bỏ:
-      // 1. Các từ ngắn (<= 2 ký tự)
-      // 2. Các stop words
-      // 3. Các số (trừ khi chúng là một phần của từ)
-      // 4. Các từ/số đã được dùng làm bộ lọc ngày tháng
-      return word.length > 2 
-             && !stopWords.includes(word) 
-             && !/^\d+$/.test(word)
-             && !wordsToRemoveFromKeywords.includes(word); // <-- Điều kiện mới quan trọng
-    });
+  let keywords = lowerPrompt.split(/\s+/).filter((word) => {
+    // Loại bỏ:
+    // 1. Các từ ngắn (<= 2 ký tự)
+    // 2. Các stop words
+    // 3. Các số (trừ khi chúng là một phần của từ)
+    // 4. Các từ/số đã được dùng làm bộ lọc ngày tháng
+    return (
+      word.length > 2 &&
+      !stopWords.includes(word) &&
+      !/^\d+$/.test(word) &&
+      !wordsToRemoveFromKeywords.includes(word)
+    ); // <-- Điều kiện mới quan trọng
+  });
 
   return { searchType, keywords, dateFilter, monthFilter, yearFilter };
 };
@@ -138,7 +195,13 @@ const analyzeIntent = (prompt) => {
  * Tìm kiếm media theo keywords, description, aiTags, date/month/year
  * Logic: AND (phải thỏa mãn TẤT CẢ các điều kiện)
  */
-const searchMedia = async (userId, keywords, dateFilter = null, monthFilter = null, yearFilter = null) => {
+const searchMedia = async (
+  userId,
+  keywords,
+  dateFilter = null,
+  monthFilter = null,
+  yearFilter = null
+) => {
   try {
     const whereClause = { userId };
     const andConditions = [];
@@ -152,10 +215,15 @@ const searchMedia = async (userId, keywords, dateFilter = null, monthFilter = nu
             { description: { [Op.like]: `%${keyword}%` } },
             // Search in aiTags JSON field
             db.Sequelize.where(
-              db.Sequelize.fn("JSON_SEARCH", db.Sequelize.col("aiTags"), "one", `%${keyword}%`),
+              db.Sequelize.fn(
+                "JSON_SEARCH",
+                db.Sequelize.col("aiTags"),
+                "one",
+                `%${keyword}%`
+              ),
               { [Op.ne]: null }
-            )
-          ]
+            ),
+          ],
         });
       });
     }
@@ -192,7 +260,14 @@ const searchMedia = async (userId, keywords, dateFilter = null, monthFilter = nu
 
     const mediaList = await db.Media.findAll({
       where: whereClause,
-      attributes: ["id", "fileUrl", "description", "aiTags", "date", "fileTypeCode"],
+      attributes: [
+        "id",
+        "fileUrl",
+        "description",
+        "aiTags",
+        "date",
+        "fileTypeCode",
+      ],
       order: [["date", "DESC"]],
       limit: 50,
     });
@@ -244,17 +319,34 @@ const searchAlbums = async (userId, keywords) => {
 const processUserQuery = async (userId, prompt) => {
   try {
     // Step 1: Phân tích intent
-    const { searchType, keywords, dateFilter, monthFilter, yearFilter } = analyzeIntent(prompt);
+    const { searchType, keywords, dateFilter, monthFilter, yearFilter } =
+      analyzeIntent(prompt);
 
-    console.log("🔍 Intent Analysis:", { searchType, keywords, dateFilter, monthFilter, yearFilter });
+    console.log("🔍 Intent Analysis:", {
+      searchType,
+      keywords,
+      dateFilter,
+      monthFilter,
+      yearFilter,
+    });
 
     // Step 2: Query database based on intent
     let results = null;
 
     if (searchType === "album") {
       results = await searchAlbums(userId, keywords);
-    } else if (searchType === "media" || searchType === "date" || searchType === "general") {
-      results = await searchMedia(userId, keywords, dateFilter, monthFilter, yearFilter);
+    } else if (
+      searchType === "media" ||
+      searchType === "date" ||
+      searchType === "general"
+    ) {
+      results = await searchMedia(
+        userId,
+        keywords,
+        dateFilter,
+        monthFilter,
+        yearFilter
+      );
     }
 
     // Step 3: Format results

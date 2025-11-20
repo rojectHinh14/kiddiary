@@ -21,8 +21,13 @@ export const removeManyFromAlbumService = async (albumId, mediaIds = []) => {
     ids.map((mid) => axios.delete(`/api/albums/${albumId}/media/${mid}`))
   );
   const ok = results
-    .map((r, i) => (r.status === "fulfilled" && r.value?.data?.errCode === 0 ? ids[i] : null))
+    .map((r, i) =>
+      r.status === "fulfilled" && r.value?.data?.errCode === 0 ? ids[i] : null
+    )
     .filter(Boolean);
   if (!ok.length) throw new Error("No deletion succeeded");
   return ok;
+};
+export const deleteAlbumService = async (albumId) => {
+  return await axios.delete(`/api/albums/${albumId}`);
 };

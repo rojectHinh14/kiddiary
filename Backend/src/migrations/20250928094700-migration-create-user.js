@@ -46,6 +46,21 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true,
       },
+      googleId: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        unique: true,
+      },
+      facebookId: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        unique: true,
+      },
+      githubId: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        unique: true,
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

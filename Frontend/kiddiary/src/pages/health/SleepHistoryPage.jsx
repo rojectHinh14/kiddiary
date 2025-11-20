@@ -99,11 +99,13 @@ export default function SleepHistoryPage({ babyName = "Yến Nhi" }) {
   const dispatch = useDispatch();
   const { childId } = useParams(); // /home/health/sleep/:childId/history
 
-  const { logs = [], loading, error } = useSelector(
-    (state) => state.childSleep || {}
-  );
+  const {
+    logs = [],
+    loading,
+    error,
+  } = useSelector((state) => state.childSleep || {});
 
-  console.log("log : " , logs);
+  console.log("log : ", logs);
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -183,9 +185,7 @@ export default function SleepHistoryPage({ babyName = "Yến Nhi" }) {
           >
             <ArrowBackIosNewRoundedIcon fontSize="small" />
           </button>
-          <div className="text-xl font-bold text-gray-700">
-            Sleep History for {babyName}
-          </div>
+          <div className="text-xl font-bold text-gray-700">Sleep History</div>
         </div>
 
         <div className="flex items-center gap-2 text-gray-600 text-sm">
@@ -225,8 +225,8 @@ export default function SleepHistoryPage({ babyName = "Yến Nhi" }) {
       <div className="space-y-5">
         {(!days || days.length === 0) && !loading && !error && (
           <p className="text-sm text-gray-500">
-
-There are no sleep records for the selected date range.          </p>
+            There are no sleep records for the selected date range.{" "}
+          </p>
         )}
 
         {days.map((d, idx) => (

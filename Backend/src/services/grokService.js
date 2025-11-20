@@ -1,24 +1,24 @@
-// src/services/grokService.js
+// src/services/groqService.js
 import axios from "axios";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const GROK_API_KEY = process.env.GROK_API_KEY;
-const GROK_MODEL = "grok-4";
-const GROK_API_URL = "https://api.x.ai/v1/chat/completions";
+const GROQ_API_KEY = process.env.GROK_API_KEY; // 👈 đổi tên biến cho đúng
+const GROQ_MODEL = "llama-3.1-70b-versatile"; // hoặc model khác bạn muốn
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-if (!GROK_API_KEY) {
-  console.warn("WARNING: GROK_API_KEY is not set in .env");
+if (!GROQ_API_KEY) {
+  console.warn("WARNING: GROQ_API_KEY is not set in .env");
 }
 
-export async function askGrok(prompt) {
+export async function askGroq(prompt) {
   if (!prompt || !prompt.toString().trim()) {
     throw new Error("prompt is empty");
   }
 
   const body = {
-    model: GROK_MODEL,
+    model: GROQ_MODEL,
     stream: false,
     messages: [
       {
@@ -33,10 +33,10 @@ export async function askGrok(prompt) {
     ],
   };
 
-  const res = await axios.post(GROK_API_URL, body, {
+  const res = await axios.post(GROQ_API_URL, body, {
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${GROK_API_KEY}`,
+      Authorization: `Bearer ${GROQ_API_KEY}`,
     },
     timeout: 60000,
   });
@@ -44,11 +44,11 @@ export async function askGrok(prompt) {
   const reply = res.data?.choices?.[0]?.message?.content?.trim();
 
   if (!reply) {
-    throw new Error("Grok returned an empty or invalid response format");
+    throw new Error("Groq returned an empty or invalid response format");
   }
 
   return reply;
 }
 
-const grokService = { askGrok };
-export default grokService;
+const groqService = { askGroq };
+export default groqService;

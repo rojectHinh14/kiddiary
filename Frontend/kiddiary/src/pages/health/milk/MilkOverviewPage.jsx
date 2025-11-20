@@ -24,7 +24,7 @@ import {
 } from "recharts";
 
 import { loadChildMilkLogs } from "../../../store/slice/childMilkSlice";
-import { getChildrenByUser } from "../../../services/childService"; 
+import { getChildrenByUser } from "../../../services/childService";
 export default function MilkOverviewPage() {
   const { totalToday, logs, last7Days, date, loading, error } = useSelector(
     (state) => state.childMilk
@@ -36,7 +36,7 @@ export default function MilkOverviewPage() {
 
   const [babyName, setBabyName] = useState(""); // tên bé
 
-  const ONE_LITER_ML = 1000;
+  const ONE_LITER_ML = 100;
 
   const weeklyChartData = (last7Days || [])
     .slice()
@@ -63,9 +63,7 @@ export default function MilkOverviewPage() {
       try {
         const children = await getChildrenByUser(); // <-- trả thẳng array children
 
-        const found = children.find(
-          (c) => String(c.id) === String(childId)
-        );
+        const found = children.find((c) => String(c.id) === String(childId));
 
         if (found) {
           setBabyName(`${found.firstName} ${found.lastName}`.trim());
@@ -197,8 +195,7 @@ export default function MilkOverviewPage() {
                 lineHeight: 1,
               }}
             >
-              {todayTotalMl}{" "}
-              <span className="text-2xl align-middle">ml</span>
+              {todayTotalMl} <span className="text-2xl align-middle">ml</span>
             </Typography>
 
             <div className="mt-3 space-y-2">
@@ -220,15 +217,13 @@ export default function MilkOverviewPage() {
 
               {!loading && todayList.length === 0 && !error && (
                 <div className="text-sm text-gray-500 mt-1">
-                  Chưa có lần bú nào được ghi lại hôm nay.
+                  No feedings recorded today.
                 </div>
               )}
 
               <div
                 className="text-right text-sm italic text-[#A855F7] cursor-pointer mt-2"
-                onClick={() =>
-                  navigate(`/home/health/milk/${childId}/history`)
-                }
+                onClick={() => navigate(`/home/health/milk/${childId}/history`)}
               >
                 see feeding history &gt;&gt;
               </div>
@@ -247,7 +242,7 @@ export default function MilkOverviewPage() {
         }}
       >
         <CardContent>
-          <Typography sx={{ fontWeight: 700, color: "#374151", mb: 2 }}>
+          <Typography sx={{ fontWeight: 700, color: "#16837B", mb: 2 }}>
             Last 7 days
           </Typography>
 
@@ -262,28 +257,82 @@ export default function MilkOverviewPage() {
               }}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <BarChart
+                  data={weeklyChartData}
+                  margin={{ top: 20, right: 30, left: 10, bottom: 10 }}
+                  barCategoryGap="20%"
+                  barGap={8}
+                >
+                  {/* Lưới nhạt hơn, không còn đen */}
+                  <CartesianGrid
+                    strokeDasharray="4 6"
+                    vertical={false}
+                    stroke="#E0E7FF"
+                  />
+
+                  {/* Trục X - chữ + đường viền */}
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 13, fill: "#64748B" }}
                     tickLine={false}
+                    axisLine={{ stroke: "#CBD5E1" }}
                   />
+
+                  {/* Trục Y - dynamic như mình đã fix ở trên + màu đẹp */}
                   <YAxis
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fill: "#64748B" }}
                     tickFormatter={(v) => `${v} ml`}
-                    domain={[0, yMaxDomain]}
+                    axisLine={false}
+                    tickLine={false}
+                    domain={[
+                      0,
+                      (dataMax) => {
+                        if (dataMax === 0) return 1000;
+                        const padding = dataMax < 300 ? 100 : 200;
+                        return Math.ceil((dataMax + padding) / 100) * 100;
+                      },
+                    ]}
                   />
+
+                  {/* Tooltip đẹp hơn */}
                   <Tooltip
-                    formatter={(value) => [`${value} ml`, "Total"]}
-                    labelFormatter={(label) => `Date: ${label}`}
+                    cursor={{ fill: "rgba(99, 102, 241, 0.1)" }}
+                    contentStyle={{
+                      backgroundColor: "#FEF3C7",
+                      border: "none",
+                      borderRadius: "12px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                    labelStyle={{ color: "#92400E", fontWeight: "bold" }}
+                    formatter={(value) => (
+                      <span style={{ color: "#1E40AF", fontWeight: "bold" }}>
+                        {value} ml
+                      </span>
+                    )}
                   />
+
+                  {/* Đường 1 lít - cam nổi bật nhưng mềm mại */}
                   <ReferenceLine
-                    y={ONE_LITER_ML}
-                    stroke="#F97316"
-                    strokeDasharray="4 4"
+                    y={1000}
+                    stroke="#FB923C"
+                    strokeDasharray="6 6"
+                    strokeWidth={2}
+                    label={{
+                      value: "1 litre",
+                      position: "insideTopRight",
+                      fill: "#C2410C",
+                      fontSize: 13,
+                      fontWeight: "bold",
+                    }}
                   />
-                  <Bar dataKey="totalMl" radius={[8, 8, 0, 0]} />
+
+                  {/* Thanh bar - màu xanh ngọc rất dễ thương */}
+                  <Bar
+                    dataKey="totalMl"
+                    fill="#5EEAD4"
+                    radius={[12, 12, 0, 0]}
+                    barSize={42}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
