@@ -18,8 +18,9 @@ Make sure your environment has the following installed:
 ## 2. Clone the Repository
 
 ```bash
-git clone <your-repo-link>
-cd <project-folder>
+git clone https://github.com/rojectHinh14/kiddiary.git
+cd kiddiary
+cd Backend
 ```
 
 ---
@@ -75,7 +76,7 @@ GITHUB_CLIENT_SECRET=
 
 ---
 
-## 🗄️ 5. Configure Database (MySQL + Sequelize)
+## 5. Configure Database (MySQL + Sequelize)
 
 ### `src/config/config.json`
 
@@ -124,7 +125,7 @@ If your MySQL username or password is different, the user needs to update this f
 
 ---
 
-## ▶️ 8. Run the Project
+## 8. Run the Project
 
 ### Development mode:
 
