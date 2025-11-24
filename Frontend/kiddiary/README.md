@@ -7,7 +7,7 @@ This project is the **frontend** built with **React + Vite**.
 
 ---
 
-## Table of Contents
+## 📌 Table of Contents
 
 - [Main Features](#-main-features)
 - [Tech Stack](#-tech-stack)
@@ -20,9 +20,9 @@ This project is the **frontend** built with **React + Vite**.
 
 ---
 
-## Main Features
+## 🎯 Main Features
 
-### Children Management
+### 👶 Children Management
 
 - Children list (Children Panel):
   - Display child avatar + name.
@@ -31,7 +31,7 @@ This project is the **frontend** built with **React + Vite**.
 - Create/update child form (`ChildForm`).
 - View child details (`ChildViewDialog`).
 
-### Moments (Diary of Moments)
+### 📸 Moments (Diary of Moments)
 
 - **Moments** page:
   - Show photo + description for each post.
@@ -43,7 +43,7 @@ This project is the **frontend** built with **React + Vite**.
   - Show list of moments for a specific day (image + description).
   - Used to quickly scan the timeline for that day.
 
-### Health
+### 🩺 Health
 
 - **Baby Overview Panel**
   - Child information: name, date of birth, age, weeks old.
@@ -64,7 +64,7 @@ This project is the **frontend** built with **React + Vite**.
 - **Sleep**
   - Navigate to the sleep tracking page.
 
-### Support Chat (ChatBox)
+### 💬 Support Chat (ChatBox)
 
 - Floating chat button at the bottom-right corner:
   - Small fixed chat box.
@@ -74,7 +74,7 @@ This project is the **frontend** built with **React + Vite**.
 
 ---
 
-## Tech Stack
+## 🧱 Tech Stack
 
 **Build & framework**
 
@@ -110,7 +110,7 @@ This project is the **frontend** built with **React + Vite**.
 
 ---
 
-## Folder Structure
+## 📁 Folder Structure
 
 ```text
 Frontend/
@@ -134,3 +134,109 @@ Frontend/
    ├─ package.json
    └─ ...
 ```
+
+---
+
+## 🔧 Environment Requirements
+
+Before running the project, make sure you have:
+
+- **Node.js**: recommended LTS version (e.g. ≥ 18.x).  
+  You can check your version with:
+
+  ```bash
+  node -v
+  ```
+
+- **npm** (comes with Node) or **yarn**:
+
+  ```bash
+  npm -v
+  ```
+
+- **Git** installed if you need to clone the repository:
+
+  ```bash
+  git --version
+  ```
+
+---
+
+## 🚀 Install & Run
+
+### 1. Clone the repository (optional)
+
+If this project is hosted on a Git server:
+
+```bash
+git clone <your-repo-url>
+cd Frontend/kiddiary
+```
+
+If you already have the folder, just `cd` into it:
+
+```bash
+cd Frontend/kiddiary
+```
+
+### 2. Install dependencies
+
+```bash
+npm i
+# or
+npm install
+```
+
+### 3. Start the development server
+
+Make sure your `.env` is set up (see next section), then run:
+
+```bash
+npm run dev
+```
+
+By default, Vite will serve the app at something like:
+
+```text
+http://localhost:5173
+```
+
+(If port `5173` is busy, Vite will choose another available port.)
+
+## ⚙️ Environment Configuration (env)
+
+### 1. Create your `.env` file
+
+The project includes a sample environment file: `.env.example`.  
+Copy it to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+> On Windows (PowerShell), you can use:
+>
+> ```powershell
+> copy .env.example .env
+> ```
+
+### 2. Configure environment variables
+
+Open the newly created `.env` file and fill in your values:
+
+```env
+VITE_BACKEND_URL=
+PORT=
+NODE_ENV=development
+VITE_ROUTER_BASE_NAME=/
+```
+
+- `VITE_BACKEND_URL`: Base URL of your backend API.
+- `PORT`: Port used by Vite dev server (optional, default is `5173`).
+- `NODE_ENV`: Usually `development` for local dev, `production` for build.
+- `VITE_ROUTER_BASE_NAME`: Base path for React Router (e.g. `/` or `/app`).
+
+> Note: **Do not commit** the `.env` file to the repository.  
+> Only commit `.env.example` with placeholder values.
+
+---
