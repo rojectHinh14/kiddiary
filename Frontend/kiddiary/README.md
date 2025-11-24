@@ -1,12 +1,136 @@
-# React + Vite
+# KidDiary – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+KidDiary is a web application that helps parents record their child’s development journey:  
+moment diary, weight – height – BMI, vaccination schedule, sleep tracking, milk log, etc.
 
-Currently, two official plugins are available:
+This project is the **frontend** built with **React + Vite**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## Table of Contents
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- [Main Features](#-main-features)
+- [Tech Stack](#-tech-stack)
+- [Folder Structure](#-folder-structure)
+- [Environment Requirements](#-environment-requirements)
+- [Install & Run](#-install--run)
+- [Environment Configuration (env)](#-environment-configuration-env)
+- [Scripts](#-scripts)
+- [Conventions & Notes](#-conventions--notes)
+
+---
+
+## Main Features
+
+### Children Management
+
+- Children list (Children Panel):
+  - Display child avatar + name.
+  - **Select mode**: select multiple children and delete in bulk.
+  - **Add child** button to add a new child.
+- Create/update child form (`ChildForm`).
+- View child details (`ChildViewDialog`).
+
+### Moments (Diary of Moments)
+
+- **Moments** page:
+  - Show photo + description for each post.
+  - Sorted by **newest date first**.
+- Create new moment (upload image + description + date).
+- Edit moment (change caption, change image).
+- Delete moment (with confirmation dialog).
+- View moments by day in `DayMomentsModal`:
+  - Show list of moments for a specific day (image + description).
+  - Used to quickly scan the timeline for that day.
+
+### Health
+
+- **Baby Overview Panel**
+  - Child information: name, date of birth, age, weeks old.
+  - Latest health metrics:
+    - Weight (kg)
+    - Height (cm)
+    - BMI (calculated from weight & height history).
+- **Daily Milk Log**
+  - `MilkOverviewPage`:
+    - Total milk intake per day.
+    - List of each feeding (time, source, ml).
+    - Chart of the last 7 days (using `recharts`).
+    - Reference line: 1 liter/day (1000 ml).
+- **Growth / Weight – Height**
+  - Navigate to the child growth tracking page.
+- **Vaccination**
+  - Navigate to the vaccination schedule page.
+- **Sleep**
+  - Navigate to the sleep tracking page.
+
+### Support Chat (ChatBox)
+
+- Floating chat button at the bottom-right corner:
+  - Small fixed chat box.
+  - **Expand** button: open a large modal in the center with dimmed overlay.
+  - Minimize / close chat.
+- Render markdown using `react-markdown`.
+
+---
+
+## Tech Stack
+
+**Build & framework**
+
+- [Vite](https://vitejs.dev/)
+- [React](https://react.dev/) 19
+- [React Router DOM](https://reactrouter.com/) v7
+
+**UI & styling**
+
+- [MUI](https://mui.com/) (`@mui/material`, `@mui/icons-material`)
+- [Tailwind CSS](https://tailwindcss.com/)
+- `@fontsource/roboto`
+- `lucide-react`, `react-icons`
+
+**State & data**
+
+- [Redux Toolkit](https://redux-toolkit.js.org/) (`@reduxjs/toolkit`)
+- `react-redux`
+- `redux-thunk`, `redux-logger`, `redux-persist`, `redux-state-sync`
+
+**Others**
+
+- `axios` – API calls
+- `date-fns` – date & time utilities
+- `lodash`
+- `react-markdown`
+- `recharts` – charts
+
+**Dev tools**
+
+- `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`
+- `tailwindcss`, `postcss`, `autoprefixer`
+
+---
+
+## Folder Structure
+
+```text
+Frontend/
+└─ kiddiary/
+   ├─ public/
+   ├─ src/
+   │  ├─ components/        # Shared components (ChatBox, MomentCard, etc.)
+   │  ├─ pages/             # Main pages (Moment, Health, Sleep, etc.)
+   │  ├─ services/          # API calls (childService, mediaService, etc.)
+   │  ├─ store/             # Redux store & slices
+   │  └─ utils/             # Utility functions (buildMonthMatrix, frame, etc.)
+   │
+   ├─ App.jsx
+   ├─ main.jsx
+   ├─ axios.js
+   ├─ redux.js
+   ├─ App.css / index.css
+   ├─ .env                  # environment config (local only, do not commit)
+   ├─ .env.example          # sample env file
+   ├─ vite.config.js
+   ├─ package.json
+   └─ ...
+```
